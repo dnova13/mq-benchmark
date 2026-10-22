@@ -25,8 +25,10 @@ export class BenchController {
     return p;
   }
 
-  private async summary(run: Run) {
-    return { ...this.runs.summary(run), dbCount: run.db ? await this.db.count(run.runId) : undefined };
+  // dbCount(COUNT(*))도 대용량에서 비싸므로 완료됐거나 final일 때만 조회한다.
+  private async summary(run: Run, final = false) {
+    const s = this.runs.summary(run, final);
+    return { ...s, dbCount: run.db && s.latencyMs ? await this.db.count(run.runId) : undefined };
   }
 
   // ===== 시나리오 A: API 1번 호출 → 서버가 N건 연속 발행 =====
@@ -48,7 +50,7 @@ export class BenchController {
     const sendMs = Date.now() - run.startedAt;
     const deadline = Date.now() + Number(timeout) * 1000;
     while (run.processed < n && Date.now() < deadline) await sleep(10);
-    return { scenario: 'A', sendMs, ...(await this.summary(run)) };
+    return { scenario: 'A', sendMs, ...(await this.summary(run, true)) };
   }
 
   // ===== 시나리오 B: 요청 1건 = 이벤트 1건 =====
@@ -73,11 +75,12 @@ export class BenchController {
     return { accepted: i };
   }
 
+  // final=true면 미완료여도 지연과 dbCount를 계산한다(부하 도구의 마지막 조회용).
   @Get('runs/:runId')
-  async getRun(@Param('runId') runId: string) {
+  async getRun(@Param('runId') runId: string, @Query('final') final = 'false') {
     const run = this.runs.get(runId);
     if (!run) throw new NotFoundException('unknown runId');
-    return this.summary(run);
+    return this.summary(run, final === 'true');
   }
 
   // 회차 사이 초기화: 결과 테이블 TRUNCATE + 메모리 런 삭제
@@ -85,6 +88,7 @@ export class BenchController {
   async reset() {
     await this.db.truncate();
     await this.redis.trim(); // 이전 회차 스트림 데이터 제거
+    await this.rabbit.purge(); // 시간 초과로 남은 이전 회차 메시지 제거
     this.runs.clear();
     return { reset: true };
   }

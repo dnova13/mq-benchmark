@@ -83,6 +83,7 @@ cd spring && mvn spring-boot:run
 - **B (요청 1건 = 이벤트 1건):** k6 또는 Locust가 `POST /orders?runId=`를 N번 호출. 실무형 흐름(API → MQ → 컨슈머 → MariaDB)
 - 공통 API: `POST /runs`, `GET /runs/{runId}`, `DELETE /runs`(결과 초기화)
 - 결과 필드: `tps`, `totalMs`, `latencyMs{p50,p95,p99}`, `dbCount`
+- 대용량: A6(10만), A7(100만, DB), A8(100만, DB 없음), B6(10만), B7(100만). `./scenarios.sh <app> 3 large`로 실행하고 `all`에는 포함하지 않는다
 - 전체 실행: `./scenarios.sh <nest|spring> [repeat] [ids]`
 
 ## 구현 메모
@@ -95,4 +96,6 @@ cd spring && mvn spring-boot:run
 - **공정한 비교를 위해** 세 MQ의 페이로드 크기, 메시지 수, ack 방식, 영속성 옵션을 가능한 한 맞춘다. 옵션을 바꾸면 결과에 기록한다.
 - 동시에 같은 브로커에 Nest와 Spring을 붙이면 컨슈머 그룹이 달라 각자 전체 메시지를 받는다. 비교 테스트는 한 번에 하나의 앱만 실행하는 편이 정확하다.
 - 검증 상태: Nest, Spring 모두 빌드와 시나리오 A, B(k6, Locust)를 1,000건 규모로 실행해 `dbCount`와 처리 건수 일치를 확인했다. Nest, Spring 모두 전체 매트릭스(각 150회)를 실행했다.
+- 진행 중 `GET /runs/{id}`는 건수만 반환한다. 지연(p50/p95/p99)과 `dbCount`는 완료 시 한 번 계산해 캐시하고, 미완료여도 `?final=true`면 계산한다(1M건 정렬과 `COUNT(*)` 비용 때문).
+- 대용량 대응 변경(2026-10-22): MariaDB 버퍼 풀 1G, `DELETE /runs`에서 Rabbit 큐 purge, 미등록 runId 메시지는 저장 안 함, Nest Rabbit backpressure, Nest Kafka sessionTimeout 60초. 상세는 `SCENARIOS.md`
 - Locust는 종료 순간 진행 중이던 요청이 통계에서 빠질 수 있다. 결과는 `RESULT`의 `processed`를 기준으로 본다.

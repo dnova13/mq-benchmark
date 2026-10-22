@@ -14,15 +14,19 @@ DESC = {
     'B1': 'B 요청1건=이벤트1건 · 1,000건 · VU 50 · DB 저장', 'B2': 'B · 10,000건 · VU 100 · DB 저장',
     'B3': 'B · 10,000건 · VU 100 · DB 없음', 'B4': 'B · 10,000건 · VU 10 · DB 저장',
     'B5': 'B · 10,000건 · VU 200 · DB 저장',
+    'A6': 'A 대량발행 · 100,000건 · DB 저장', 'A7': 'A 대량발행 · 1,000,000건 · DB 저장',
+    'A8': 'A 대량발행 · 1,000,000건 · DB 없음',
+    'B6': 'B · 100,000건 · VU 100 · DB 저장', 'B7': 'B · 1,000,000건 · VU 100 · DB 저장',
 }
 MQS = ['kafka', 'redis', 'rabbit']
 rows = [json.loads(l) for l in open(sys.argv[1])]
 g = collections.defaultdict(list)
 for r in rows:
     g[(r['scenario'], r['mq'])].append(r)
-med = lambda rs, k: int(st.median(x[k] for x in rs))
+# 측정이 없는 MQ는 0으로 표시한다(대용량 일부만 실행한 경우)
+med = lambda rs, k: int(st.median(x[k] for x in rs)) if rs else 0
 
-print(f"앱: {rows[0]['app']} · 시나리오당 MQ별 {len(g[next(iter(g))])}회 측정의 중앙값\n")
+print(f"앱: {rows[0]['app']} · 시나리오당 MQ별 {max(len(v) for v in g.values())}회 측정의 중앙값\n")
 ranks = collections.defaultdict(list)
 for s in sorted({k[0] for k in g}):
     print(f"### {s}: {DESC.get(s, '')}\n")
@@ -30,11 +34,11 @@ for s in sorted({k[0] for k in g}):
     print('|---|---:|---|---:|---:|---:|---:|')
     order = sorted(MQS, key=lambda m: -med(g[(s, m)], 'tps'))
     for m in MQS:
-        rs = g[(s, m)]
-        tps = [x['tps'] for x in rs]
+        rs = g.get((s, m), [])
+        tps = [x['tps'] for x in rs] or [0]
         rk = order.index(m) + 1
         ranks[m].append(rk)
-        ok = '' if all(x['done'] for x in rs) else ' ⚠미완료'
+        ok = '' if rs and all(x['done'] for x in rs) else ' ⚠미완료'
         print(f"| {m} | {med(rs,'tps'):,} | {min(tps):,}~{max(tps):,} | {med(rs,'p50')} | {med(rs,'p95')} | {med(rs,'p99')} | {rk}{ok} |")
     print()
 print('### MQ별 종합 (시나리오 전체)\n')

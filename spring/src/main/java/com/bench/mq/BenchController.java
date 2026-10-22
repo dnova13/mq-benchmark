@@ -1,6 +1,7 @@
 package com.bench.mq;
 
 import com.bench.mq.RunRegistry.Run;
+import org.springframework.amqp.core.AmqpAdmin;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -19,14 +20,16 @@ public class BenchController {
     private final DbService db;
     private final RunRegistry runs;
     private final StringRedisTemplate redis;
+    private final AmqpAdmin amqpAdmin;
 
-    public BenchController(Publisher publisher, DbService db, RunRegistry runs, StringRedisTemplate redis) {
-        this.publisher = publisher; this.db = db; this.runs = runs; this.redis = redis;
+    public BenchController(Publisher publisher, DbService db, RunRegistry runs, StringRedisTemplate redis, AmqpAdmin amqpAdmin) {
+        this.publisher = publisher; this.db = db; this.runs = runs; this.redis = redis; this.amqpAdmin = amqpAdmin;
     }
 
-    private Map<String, Object> summary(Run run) {
-        Map<String, Object> m = new LinkedHashMap<>(runs.summary(run));
-        if (run.db) m.put("dbCount", db.count(run.runId));
+    // dbCount(COUNT(*))도 대용량에서 비싸므로 완료됐거나 final일 때만 조회한다.
+    private Map<String, Object> summary(Run run, boolean fin) {
+        Map<String, Object> m = new LinkedHashMap<>(runs.summary(run, fin));
+        if (run.db && m.containsKey("latencyMs")) m.put("dbCount", db.count(run.runId));
         return m;
     }
 
@@ -57,7 +60,7 @@ public class BenchController {
         Map<String, Object> res = new LinkedHashMap<>();
         res.put("scenario", "A");
         res.put("sendMs", sendMs);
-        res.putAll(summary(run));
+        res.putAll(summary(run, true));
         return res;
     }
 
@@ -86,15 +89,17 @@ public class BenchController {
         return Map.of("accepted", i);
     }
 
+    // final=true면 미완료여도 지연과 dbCount를 계산한다(부하 도구의 마지막 조회용).
     @GetMapping("/runs/{runId}")
-    public Map<String, Object> getRun(@PathVariable String runId) {
-        return summary(requireRun(runId));
+    public Map<String, Object> getRun(@PathVariable String runId, @RequestParam(name = "final", defaultValue = "false") boolean fin) {
+        return summary(requireRun(runId), fin);
     }
 
     @DeleteMapping("/runs")
     public Map<String, Object> reset() {
         db.truncate();
         redis.opsForStream().trim(MqConfig.STREAM_KEY, 0); // 이전 회차 스트림 데이터 제거
+        amqpAdmin.purgeQueue(MqConfig.RABBIT_QUEUE, false); // 시간 초과로 남은 이전 회차 메시지 제거
         runs.clear();
         return Map.of("reset", true);
     }

@@ -9,12 +9,17 @@ const COUNT = parseInt(__ENV.COUNT || '1000');
 const VUS = parseInt(__ENV.VUS || '50');
 const SIZE = __ENV.SIZE || '256';
 const DB = __ENV.DB || 'true';
+// 대용량용 시간 설정(초). 기본값은 기존 동작과 같다.
+const MAX_DURATION = __ENV.MAX_DURATION || '10m';
+const WAIT_SEC = parseFloat(__ENV.WAIT_SEC || '300');
+const POLL_SEC = parseFloat(__ENV.POLL_SEC || '0.1');
+const STALL_SEC = parseFloat(__ENV.STALL_SEC || '15');
 
 export const options = {
   scenarios: {
-    orders: { executor: 'shared-iterations', vus: VUS, iterations: COUNT, maxDuration: '10m' },
+    orders: { executor: 'shared-iterations', vus: VUS, iterations: COUNT, maxDuration: MAX_DURATION },
   },
-  teardownTimeout: '10m',
+  teardownTimeout: `${Math.ceil(WAIT_SEC + 60)}s`,
 };
 
 export function setup() {
@@ -34,15 +39,17 @@ export default function (data) {
 export function teardown(data) {
   let result;
   let last = -1;
-  let stalled = 0;
-  for (let t = 0; t < 3000; t++) {
+  let lastChange = Date.now();
+  const deadline = Date.now() + WAIT_SEC * 1000;
+  while (Date.now() < deadline) {
     result = http.get(`${BASE}/runs/${data.runId}`).json();
     if (result.done) break;
-    // 처리 건수가 15초간 늘지 않으면 유실로 보고 종료
-    stalled = result.processed === last ? stalled + 1 : 0;
-    last = result.processed;
-    if (stalled >= 150) break;
-    sleep(0.1);
+    // 처리 건수가 STALL_SEC초간 늘지 않으면 유실로 보고 종료
+    if (result.processed !== last) { last = result.processed; lastChange = Date.now(); }
+    if (Date.now() - lastChange >= STALL_SEC * 1000) break;
+    sleep(POLL_SEC);
   }
+  // 미완료로 끝나면 지연과 dbCount를 강제로 계산해 받는다
+  if (!result || !result.done) result = http.get(`${BASE}/runs/${data.runId}?final=true`).json();
   console.log(`RESULT ${JSON.stringify(result)}`);
 }

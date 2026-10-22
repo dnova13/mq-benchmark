@@ -17,6 +17,10 @@ MQ = os.getenv("MQ", "kafka")
 COUNT = int(os.getenv("COUNT", "1000"))
 SIZE = os.getenv("SIZE", "256")
 DB = os.getenv("DB", "true")
+# 대용량용 시간 설정(초). 기본값은 기존 동작과 같다.
+WAIT_SEC = float(os.getenv("WAIT_SEC", "300"))
+POLL_SEC = float(os.getenv("POLL_SEC", "0.1"))
+STALL_SEC = float(os.getenv("STALL_SEC", "15"))
 
 state = {"runId": None, "sent": 0, "quitting": False}
 
@@ -34,18 +38,23 @@ def on_test_start(environment, **kwargs):
 @events.test_stop.add_listener
 def on_test_stop(environment, **kwargs):
     # 소비와 DB 저장이 끝날 때까지 대기 후 결과 출력
+    url = f"{environment.host}/runs/{state['runId']}"
     result = {}
-    last, stalled = -1, 0
-    for _ in range(3000):
-        result = requests.get(f"{environment.host}/runs/{state['runId']}").json()
+    last, last_change = -1, time.time()
+    deadline = time.time() + WAIT_SEC
+    while time.time() < deadline:
+        result = requests.get(url).json()
         if result.get("done"):
             break
-        # 처리 건수가 15초간 늘지 않으면 유실로 보고 종료
-        stalled = stalled + 1 if result.get("processed") == last else 0
-        last = result.get("processed")
-        if stalled >= 150:
+        # 처리 건수가 STALL_SEC초간 늘지 않으면 유실로 보고 종료
+        if result.get("processed") != last:
+            last, last_change = result.get("processed"), time.time()
+        if time.time() - last_change >= STALL_SEC:
             break
-        time.sleep(0.1)
+        time.sleep(POLL_SEC)
+    # 미완료로 끝나면 지연과 dbCount를 강제로 계산해 받는다
+    if not result.get("done"):
+        result = requests.get(url, params={"final": "true"}).json()
     print(f"RESULT {json.dumps(result)}")
 
 

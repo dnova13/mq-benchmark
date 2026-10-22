@@ -16,6 +16,7 @@ public class Processor {
     public void process(String raw) {
         try {
             JsonNode e = mapper.readTree(raw);
+            if (runs.get(e.get("runId").asText()) == null) return; // 이전 회차 잔여 메시지는 저장하지 않는다
             if (e.get("db").asBoolean()) {
                 boolean inserted = db.insert(e.get("id").asText(), e.get("runId").asText(), e.get("userId").asInt(),
                         e.get("amount").asInt(), e.get("pad").asText(), e.get("createdAt").asLong());

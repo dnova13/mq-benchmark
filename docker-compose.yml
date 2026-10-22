@@ -4,6 +4,8 @@ services:
   mariadb:
     image: mariadb:11
     container_name: bench-mariadb
+    # 1M건 행이 기본 버퍼 풀(128MB)에 들어가지 않아 1G로 늘림
+    command: ["--innodb-buffer-pool-size=1G"]
     environment:
       MARIADB_ROOT_PASSWORD: "1234"
       MARIADB_DATABASE: bench

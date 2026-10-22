@@ -18,6 +18,7 @@ public class RunRegistry {
         public volatile long startedAt;
         public volatile long lastProcessedAt;
         public final List<Long> latencies = Collections.synchronizedList(new ArrayList<>());
+        volatile Map<String, Object> latencyMs; // 완료 시 한 번 계산해 캐시
 
         Run(String runId, String mq, boolean db, long expected, int size) {
             this.runId = runId; this.mq = mq; this.db = db; this.expected = expected; this.size = size;
@@ -55,20 +56,31 @@ public class RunRegistry {
         return sorted.get(Math.max(idx, 0));
     }
 
-    public Map<String, Object> summary(Run r) {
+    private static Map<String, Object> latency(Run r) {
         List<Long> sorted;
         synchronized (r.latencies) { sorted = new ArrayList<>(r.latencies); }
         Collections.sort(sorted);
-        long processed = r.processed.get();
-        long totalMs = (r.lastProcessedAt != 0 && r.startedAt != 0) ? r.lastProcessedAt - r.startedAt : 0;
         Map<String, Object> lat = new LinkedHashMap<>();
         lat.put("p50", pct(sorted, 50)); lat.put("p95", pct(sorted, 95)); lat.put("p99", pct(sorted, 99));
         lat.put("max", sorted.isEmpty() ? 0 : sorted.get(sorted.size() - 1));
+        return lat;
+    }
+
+    // 복사와 정렬은 비용이 크고 컨슈머의 record()를 막으므로, 완료됐거나 final일 때만 계산한다.
+    public Map<String, Object> summary(Run r, boolean fin) {
+        long processed = r.processed.get();
+        boolean done = processed >= r.expected;
+        long totalMs = (r.lastProcessedAt != 0 && r.startedAt != 0) ? r.lastProcessedAt - r.startedAt : 0;
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("runId", r.runId); m.put("mq", r.mq); m.put("db", r.db); m.put("expected", r.expected);
-        m.put("processed", processed); m.put("done", processed >= r.expected); m.put("totalMs", totalMs);
+        m.put("processed", processed); m.put("done", done); m.put("totalMs", totalMs);
         m.put("tps", totalMs > 0 ? Math.round(processed * 1000.0 / totalMs) : 0);
-        m.put("latencyMs", lat);
+        Map<String, Object> lat = r.latencyMs;
+        if (lat == null && (done || fin)) {
+            lat = latency(r);
+            if (done) r.latencyMs = lat;
+        }
+        if (lat != null) m.put("latencyMs", lat);
         return m;
     }
 }

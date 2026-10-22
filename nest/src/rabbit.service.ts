@@ -23,11 +23,16 @@ export class RabbitService implements OnModuleInit, OnModuleDestroy {
     });
   }
 
+  // 쓰기 버퍼가 차면(false 반환) drain을 기다린다. 기다리지 않으면 대용량에서 전부 Node 메모리에 쌓인다.
   async publish(events: string[]) {
     for (const e of events) {
-      this.channel.sendToQueue(RABBIT_QUEUE, Buffer.from(e), { persistent: true });
+      if (!this.channel.sendToQueue(RABBIT_QUEUE, Buffer.from(e), { persistent: true })) {
+        await new Promise((r) => this.channel.once('drain', r));
+      }
     }
   }
+
+  async purge() { await this.channel.purgeQueue(RABBIT_QUEUE); }
 
   async onModuleDestroy() {
     await this.channel?.close();
