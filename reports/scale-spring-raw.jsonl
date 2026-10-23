@@ -69,3 +69,4 @@
 {"app": "spring", "scenario": "B-1k", "mq": "rabbit", "run": 2, "count": 1000, "size": 256, "db": true, "vus": 100, "tps": 1232, "totalMs": 812, "p50": 225, "p95": 346, "p99": 393, "dbCount": 1000, "done": true}
 {"app": "spring", "scenario": "B-1k", "mq": "rabbit", "run": 3, "count": 1000, "size": 256, "db": true, "vus": 100, "tps": 1805, "totalMs": 554, "p50": 110, "p95": 202, "p99": 246, "dbCount": 1000, "done": true}
 {"app": "spring", "scenario": "B-1k", "mq": "rabbit", "run": 4, "count": 1000, "size": 256, "db": true, "vus": 100, "tps": 1761, "totalMs": 568, "p50": 132, "p95": 262, "p99": 307, "dbCount": 1000, "done": true}
+{"app": "spring", "scenario": "B-1k", "mq": "rabbit", "run": 5, "count": 1000, "size": 256, "db": true, "vus": 100, "tps": 1466, "totalMs": 682, "p50": 139, "p95": 266, "p99": 315, "dbCount": 1000, "done": true}
