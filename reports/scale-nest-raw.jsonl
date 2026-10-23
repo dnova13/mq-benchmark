@@ -106,3 +106,6 @@
 {"app": "nest", "scenario": "B-1m", "mq": "kafka", "run": 1, "count": 1000000, "size": 256, "db": true, "vus": 100, "tps": 2115, "totalMs": 472753, "p50": 189997, "p95": 280963, "p99": 290953, "dbCount": 1000000, "done": true}
 {"app": "nest", "scenario": "B-1m", "mq": "kafka", "run": 2, "count": 1000000, "size": 256, "db": true, "vus": 100, "tps": 2052, "totalMs": 487295, "p50": 186678, "p95": 298801, "p99": 308974, "dbCount": 1000000, "done": true}
 {"app": "nest", "scenario": "B-1m", "mq": "redis", "run": 1, "count": 1000000, "size": 256, "db": true, "vus": 100, "tps": 2744, "totalMs": 364491, "p50": 150040, "p95": 203890, "p99": 208103, "dbCount": 1000000, "done": true}
+{"app": "nest", "scenario": "B-1m", "mq": "redis", "run": 2, "count": 1000000, "size": 256, "db": true, "vus": 100, "tps": 2757, "totalMs": 362699, "p50": 149110, "p95": 200354, "p99": 204607, "dbCount": 1000000, "done": true}
+{"app": "nest", "scenario": "B-1m", "mq": "rabbit", "run": 1, "count": 1000000, "size": 256, "db": true, "vus": 100, "tps": 2015, "totalMs": 496165, "p50": 225148, "p95": 289718, "p99": 296416, "dbCount": 1000000, "done": true}
+{"app": "nest", "scenario": "B-1m", "mq": "rabbit", "run": 2, "count": 1000000, "size": 256, "db": true, "vus": 100, "tps": 2050, "totalMs": 487921, "p50": 220478, "p95": 288457, "p99": 293489, "dbCount": 1000000, "done": true}
