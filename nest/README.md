@@ -132,7 +132,7 @@ MQ_KAFKA_ENABLED=false node dist/main.js   # Kafka 없이 기동
 ```bash
 curl "localhost:3000/bench/kafka?count=10000&size=256&db=true"
 ../bench.sh nest 10000 256 true        # 세 MQ 차례로
-../scenarios.sh nest 5                 # 전체 매트릭스 (../SCENARIOS.md)
+../scenarios.sh nest                   # 규모별 12개 시나리오 (../SCENARIOS.md)
 ```
 
 ## 참고

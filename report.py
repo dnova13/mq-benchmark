@@ -1,49 +1,58 @@
 #!/usr/bin/env python3
-"""results/*.jsonl -> 마크다운 표 (시나리오별 MQ 비교 + MQ별 종합).
-사용: python3 report.py results/spring-XXXX.jsonl > reports/spring-tables.md
+"""results/*.jsonl -> 마크다운 표 (규모별 MQ 비교 + MQ별 종합).
+사용: python3 report.py reports/scale-spring-raw.jsonl
 """
 import collections
 import json
 import statistics as st
 import sys
 
-DESC = {
-    'A1': 'A 대량발행 · 1,000건 · DB 없음', 'A2': 'A 대량발행 · 10,000건 · DB 없음',
-    'A3': 'A 대량발행 · 1,000건 · DB 저장', 'A4': 'A 대량발행 · 10,000건 · DB 저장',
-    'A5': 'A 대량발행 · 10,000건 · 1KB · DB 저장',
-    'B1': 'B 요청1건=이벤트1건 · 1,000건 · VU 50 · DB 저장', 'B2': 'B · 10,000건 · VU 100 · DB 저장',
-    'B3': 'B · 10,000건 · VU 100 · DB 없음', 'B4': 'B · 10,000건 · VU 10 · DB 저장',
-    'B5': 'B · 10,000건 · VU 200 · DB 저장',
-    'A6': 'A 대량발행 · 100,000건 · DB 저장', 'A7': 'A 대량발행 · 1,000,000건 · DB 저장',
-    'A8': 'A 대량발행 · 1,000,000건 · DB 없음',
-    'B6': 'B · 100,000건 · VU 100 · DB 저장', 'B7': 'B · 1,000,000건 · VU 100 · DB 저장',
-}
 MQS = ['kafka', 'redis', 'rabbit']
+KIND = {'A': 'A 대량 발행 (요청 1번에 서버가 N건 발행)',
+        'B': 'B 요청 1건 = 이벤트 1건 (VU(동시 사용자) 100명이 합계 N번 요청)'}
 rows = [json.loads(l) for l in open(sys.argv[1])]
 g = collections.defaultdict(list)
+count_of = {}
 for r in rows:
     g[(r['scenario'], r['mq'])].append(r)
-# 측정이 없는 MQ는 0으로 표시한다(대용량 일부만 실행한 경우)
+    count_of[r['scenario']] = r['count']
+# 측정이 없는 MQ는 0으로 표시한다
 med = lambda rs, k: int(st.median(x[k] for x in rs)) if rs else 0
+# 방식(A/B) → 건수 순
+scenarios = sorted(count_of, key=lambda s: (s[0], count_of[s]))
 
-print(f"앱: {rows[0]['app']} · 시나리오당 MQ별 {max(len(v) for v in g.values())}회 측정의 중앙값\n")
+print(f"앱: {rows[0]['app']} · 시나리오별 MQ마다 반복 측정의 중앙값 (반복 횟수는 표의 n)\n")
 ranks = collections.defaultdict(list)
-for s in sorted({k[0] for k in g}):
-    print(f"### {s}: {DESC.get(s, '')}\n")
-    print('| MQ | TPS(중앙값) | TPS 최소~최대 | p50(ms) | p95(ms) | p99(ms) | 순위(TPS) |')
-    print('|---|---:|---|---:|---:|---:|---:|')
-    order = sorted(MQS, key=lambda m: -med(g[(s, m)], 'tps'))
-    for m in MQS:
-        rs = g.get((s, m), [])
-        tps = [x['tps'] for x in rs] or [0]
-        rk = order.index(m) + 1
-        ranks[m].append(rk)
-        ok = '' if rs and all(x['done'] for x in rs) else ' ⚠미완료'
-        print(f"| {m} | {med(rs,'tps'):,} | {min(tps):,}~{max(tps):,} | {med(rs,'p50')} | {med(rs,'p95')} | {med(rs,'p99')} | {rk}{ok} |")
+for kind in ['A', 'B']:
+    sc = [s for s in scenarios if s[0] == kind]
+    if not sc:
+        continue
+    print(f"## {KIND[kind]}\n")
+    print('| 건수 | MQ | n | TPS(중앙값) | TPS 최소~최대 | p50(ms) | p95(ms) | p99(ms) | 순위(TPS) |')
+    print('|---:|---|---:|---:|---|---:|---:|---:|---:|')
+    for s in sc:
+        order = sorted(MQS, key=lambda m: -med(g.get((s, m), []), 'tps'))
+        for m in MQS:
+            rs = g.get((s, m), [])
+            tps = [x['tps'] for x in rs] or [0]
+            rk = order.index(m) + 1
+            ranks[(kind, m)].append((s, rk))
+            ok = '' if rs and all(x['done'] for x in rs) else ' ⚠미완료'
+            print(f"| {count_of[s]:,} | {m} | {len(rs)} | {med(rs,'tps'):,} | {min(tps):,}~{max(tps):,} | "
+                  f"{med(rs,'p50'):,} | {med(rs,'p95'):,} | {med(rs,'p99'):,} | {rk}{ok} |")
     print()
-print('### MQ별 종합 (시나리오 전체)\n')
-print('| MQ | 1위 횟수 | 평균 순위 | 시나리오별 순위 |')
-print('|---|---:|---:|---|')
-sc = sorted({k[0] for k in g})
-for m in MQS:
-    print(f"| {m} | {ranks[m].count(1)} | {sum(ranks[m])/len(ranks[m]):.2f} | {', '.join(f'{s}:{r}' for s, r in zip(sc, ranks[m]))} |")
+    print(f"### {kind} 규모별 TPS 요약\n")
+    print('| 건수 | ' + ' | '.join(MQS) + ' | 1위 |')
+    print('|---:|' + '---:|' * len(MQS) + '---|')
+    for s in sc:
+        vals = {m: med(g.get((s, m), []), 'tps') for m in MQS}
+        print(f"| {count_of[s]:,} | " + ' | '.join(f"{vals[m]:,}" for m in MQS) + f" | {max(vals, key=vals.get)} |")
+    print()
+    print(f"### {kind} MQ별 종합\n")
+    print('| MQ | 1위 횟수 | 평균 순위 | 건수별 순위 |')
+    print('|---|---:|---:|---|')
+    for m in MQS:
+        rk = ranks[(kind, m)]
+        print(f"| {m} | {sum(1 for _, r in rk if r == 1)} | {sum(r for _, r in rk)/len(rk):.2f} | "
+              f"{', '.join(f'{count_of[s]:,}:{r}' for s, r in rk)} |")
+    print()

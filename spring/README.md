@@ -140,7 +140,7 @@ java -jar build/libs/mq-bench-spring-0.0.1.jar --mq.kafka.enabled=false
 ```bash
 curl "localhost:8080/bench/kafka?count=10000&size=256&db=true"
 ../bench.sh spring 10000 256 true      # 세 MQ 차례로
-../scenarios.sh spring 5               # 전체 매트릭스 (../SCENARIOS.md)
+../scenarios.sh spring                 # 규모별 12개 시나리오 (../SCENARIOS.md)
 ```
 
 ## 참고

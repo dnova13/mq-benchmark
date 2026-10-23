@@ -33,6 +33,7 @@ curl "localhost:3000/bench/kafka?count=10000&size=256&db=true"
 
 **방식 B: 요청 1건 = 이벤트 1건 (k6, Locust)**
 ```bash
+# VUS = VU(동시 사용자) 수, COUNT = 전체 요청 수(VU가 나눠서 보냄)
 k6 run -e MQ=kafka -e COUNT=10000 -e VUS=100 -e DB=true load/k6/orders.js
 MQ=kafka COUNT=10000 DB=true locust -f load/locust/locustfile.py --headless -u 100 -r 100 -t 10m --host http://localhost:3000
 ```
@@ -40,8 +41,8 @@ Spring을 테스트할 때는 k6는 `-e BASE=http://localhost:8080`, Locust는 `
 
 **전체 시나리오 자동 실행**
 ```bash
-./scenarios.sh nest            # 워밍업 1회 + 5회 반복, 중앙값 요약
-./scenarios.sh spring 3 A4,B2  # 일부만
+./scenarios.sh nest                   # 규모별 12개(1천~300만), MQ마다 워밍업 1회 + 시나리오별 반복
+./scenarios.sh spring 1 A-1k,B-1k     # 일부만, 1회
 ```
 결과는 `results/*.jsonl`에 저장된다.
 
