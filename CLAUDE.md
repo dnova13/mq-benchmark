@@ -22,6 +22,7 @@ mq-benchmark/
 ├─ report.py            # jsonl -> 마크다운 표
 ├─ compare.py           # Spring vs Nest 비교표
 ├─ charts.py            # 결과 그래프(PNG, matplotlib + 한글 폰트)
+├─ practice/            # MQ 실습: CLI 스크립트(cli/), Node·Java 예제(node/, java/), 가이드(README.md, redis/kafka/rabbitmq/gui.md)
 ├─ nest/                # NestJS 10 (TypeScript, @nestjs/config + .env), 포트 3000
 └─ spring/              # Spring Boot 3.4 + Java 21 (Gradle, properties), 포트 8080
 ```
@@ -38,6 +39,7 @@ mq-benchmark/
 
 - MQ 모듈은 벤치 코드를 모른다. 컨슈머는 앱이 구현한 `MessageHandler`를 호출하고, 벤치는 `MessagePublisher`로 발행한다.
 - 꺼진 MQ로 벤치 API를 호출하면 400이다.
+- 연습용 API(`/practice/{mq}/...`, Spring `com.bench.practice`, Nest `src/practice`)는 벤치마크와 별개인 `practice-topic`, `practice:stream`, `practice-queue`만 쓰고 연결도 따로 만든다.
 
 ## 인프라 (docker-compose.yml)
 원래 포트 앞에 `3`을 붙인 외부 포트를 쓴다.
@@ -48,13 +50,17 @@ mq-benchmark/
 | Redis | redis:7-alpine | **36397** | 없음 |
 | Kafka | apache/kafka:3.9.0 (KRaft, ZooKeeper 없음) | **39092** | 없음 |
 | RabbitMQ | rabbitmq:3-management | **35672** (AMQP), **31567** (관리 UI) | guest / guest |
+| RedisInsight (GUI, `gui` 프로필) | redis/redisinsight:2.68 | **35540** | 없음(첫 접속 시 약관 동의) |
+| Kafka UI (GUI, `gui` 프로필) | kafbat/kafka-ui:v1.2.0 | **38080** | 없음 |
 
 - Redis 포트는 요청대로 `36397`이다. 일반적인 규칙(6379 앞에 3)을 따르면 `36379`이므로 오타일 수 있다. 바꾸려면 compose와 양쪽 설정을 같이 수정한다.
 - RabbitMQ 관리 UI 15672 앞에 3을 붙이면 `315672`로 포트 범위(65535)를 넘는다. 그래서 `31567`을 쓴다.
-- Kafka의 advertised listener는 `localhost:39092`다. 호스트에서 실행하는 앱만 접속할 수 있다.
+- Kafka의 advertised listener는 `localhost:39092`(호스트의 앱용)와 `kafka:29092`(같은 compose 네트워크의 컨테이너용, Kafka UI가 사용)다.
+- GUI 컨테이너는 `gui` 프로필이라 `docker compose up -d`에서는 뜨지 않는다. `docker compose --profile gui up -d`로 켠다. 벤치마크 측정 중에는 끄는 편이 정확하다.
 
 ```bash
-docker compose up -d      # 전체 기동
+docker compose up -d                  # 전체 기동(벤치마크용)
+docker compose --profile gui up -d    # GUI까지(실습용)
 docker compose down -v    # 종료와 데이터 삭제
 ```
 
@@ -85,6 +91,7 @@ cd spring && ./gradlew bootRun     # 또는 ./gradlew build -x test 후 java -ja
 ## 문서
 - `GUIDE.md`: 전체 테스트 가이드 / `nest/README.md`, `spring/README.md`: 앱별 구조, 설정, API, 다른 프로젝트로 가져가는 법
 - `SCENARIOS.md`: 시나리오 A, B 정의, 실행 절차, 결과 해석 기준
+- `practice/README.md`: MQ 실습 안내(CLI 스크립트, GUI, Node·Java 예제, 앱 연습용 API `/practice`). MQ별 `practice/redis.md`, `kafka.md`, `rabbitmq.md`, GUI 화면 사용법 `practice/gui.md`
 - `docs/k6-guide.md`: k6로 B 시나리오 실행하는 방법(scenarios.sh, 직접 실행, 변수, 웹 대시보드와 HTML 리포트, 결과 읽는 법)
 - `docs/locust-guide.md`: Locust로 B 시나리오 실행하는 방법(규모별 스크립트, 웹 화면, 캡처). 결과 리포트에는 Locust 결과를 넣지 않는다
 - `docs/nest-vs-spring-concepts.md`: I/O vs CPU, Node vs Spring, 구조/생태계, MQ 쓰임새 개념 정리(일반 경향, 측정값 아님)

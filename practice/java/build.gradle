@@ -1,0 +1,39 @@
+// Kafka, Redis Streams, RabbitMQ 최소 발행/소비 예제 (순수 클라이언트, Spring 없음)
+// 실행: ./gradlew run -Pex=KafkaPractice --args="produce 5"
+plugins {
+    id 'java'
+    id 'application'
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // Spring Boot 3.4.1이 쓰는 버전과 맞췄다
+    implementation 'org.apache.kafka:kafka-clients:3.8.1'
+    implementation 'io.lettuce:lettuce-core:6.4.1.RELEASE'
+    implementation 'com.rabbitmq:amqp-client:5.22.0'
+    runtimeOnly 'org.slf4j:slf4j-simple:2.0.16'
+}
+
+application {
+    // -Pex=RedisPractice | KafkaPractice | RabbitPractice
+    mainClass = "practice.${project.findProperty('ex') ?: 'KafkaPractice'}"
+    // 터미널 로케일과 상관없이 한글 출력이 깨지지 않게 UTF-8로 고정
+    applicationDefaultJvmArgs = ['-Dorg.slf4j.simpleLogger.defaultLogLevel=warn', '-Dstdout.encoding=UTF-8', '-Dstderr.encoding=UTF-8']
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+tasks.named('run') {
+    standardInput = System.in
+}

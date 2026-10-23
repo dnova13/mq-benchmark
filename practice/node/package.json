@@ -1,0 +1,16 @@
+{
+  "name": "mq-practice-node",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Kafka, Redis Streams, RabbitMQ 최소 발행/소비 예제",
+  "scripts": {
+    "redis": "node redis.js",
+    "kafka": "node kafka.js",
+    "rabbitmq": "node rabbitmq.js"
+  },
+  "dependencies": {
+    "amqplib": "^0.10.4",
+    "ioredis": "^5.4.1",
+    "kafkajs": "^2.2.4"
+  }
+}

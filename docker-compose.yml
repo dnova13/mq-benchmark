@@ -31,10 +31,11 @@ services:
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
-      KAFKA_LISTENERS: PLAINTEXT://:39092,CONTROLLER://:9093
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:39092
+      # PLAINTEXT: 호스트의 앱용(localhost:39092), INTERNAL: 같은 compose 네트워크의 컨테이너용(kafka-ui 등)
+      KAFKA_LISTENERS: PLAINTEXT://:39092,CONTROLLER://:9093,INTERNAL://:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:39092,INTERNAL://kafka:29092
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,INTERNAL:PLAINTEXT
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
@@ -53,6 +54,31 @@ services:
       - "31567:15672"    # 관리 UI (315672는 포트 범위 초과라 31567 사용)
     volumes:
       - rabbit-data:/var/lib/rabbitmq
+
+  # ===== GUI (연습용). `docker compose --profile gui up -d`일 때만 뜬다 =====
+  redisinsight:
+    image: redis/redisinsight:2.68
+    container_name: bench-redisinsight
+    profiles: ["gui"]
+    ports:
+      - "35540:5540"     # http://localhost:35540
+    environment:
+      RI_REDIS_HOST: redis   # 시작 시 bench-redis를 자동 등록
+      RI_REDIS_PORT: "6379"
+      RI_REDIS_ALIAS: bench-redis
+    depends_on: [redis]
+
+  kafka-ui:
+    image: kafbat/kafka-ui:v1.2.0
+    container_name: bench-kafka-ui
+    profiles: ["gui"]
+    ports:
+      - "38080:8080"     # http://localhost:38080
+    environment:
+      KAFKA_CLUSTERS_0_NAME: bench
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+      DYNAMIC_CONFIG_ENABLED: "true"
+    depends_on: [kafka]
 
 volumes:
   mariadb-data:

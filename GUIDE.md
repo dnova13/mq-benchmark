@@ -15,6 +15,8 @@ docker compose ps          # 4개 컨테이너가 Up인지 확인
 | Kafka | `localhost:39092` |
 | RabbitMQ | `localhost:35672`, 관리 UI http://localhost:31567 (guest / guest) |
 
+GUI(RedisInsight http://localhost:35540, Kafka UI http://localhost:38080)까지 띄우려면 `docker compose --profile gui up -d`. MQ 기본 조작 실습은 `practice/README.md`를 본다.
+
 ## 3. 앱 실행 (한 번에 하나만 실행하는 것을 권장)
 ```bash
 cd nest   && npm install && npm run start:dev      # :3000

@@ -126,6 +126,22 @@ java -jar build/libs/mq-bench-spring-0.0.1.jar --mq.kafka.enabled=false
    - MQ를 여러 개 쓰면 `MessagePublisher` 빈도 여러 개가 된다. 이때는 구현 타입으로 주입받거나, `List<MessagePublisher>`를 받아 `type()`으로 고른다.
    - RabbitMQ와 Redis Streams는 key를 무시하므로 `Message.of(payload)`로 보내도 된다.
 
+## 연습용 API (`/practice`)
+MQ 기본 동작을 curl로 해 보는 API다. 벤치마크와 별개인 `practice-topic`, `practice:stream`, `practice-queue`만 다룬다. 구현 위치는 `com.bench.practice`이다.
+
+| 메서드와 경로 | 설명 |
+|---|---|
+| `POST /practice/{mq}/messages` | 발행. 본문 `{"key":"user-1","payload":"hello"}` |
+| `GET /practice/{mq}/messages?count&ack` | 최근 메시지 조회. Kafka·Redis는 남고, RabbitMQ는 `ack=true`면 사라진다(`ack=false`는 엿보기) |
+| `GET /practice/{mq}/info` | 상태(길이, 오프셋, 메시지·컨슈머 수) |
+| `DELETE /practice/{mq}` | 실습 대상 삭제 |
+
+```bash
+curl -X POST localhost:8080/practice/kafka/messages -H 'Content-Type: application/json' -d '{"key":"user-1","payload":"hello"}'
+curl "localhost:8080/practice/kafka/messages?count=5"
+```
+실습 전체 가이드(CLI, GUI, 코드 예제)는 `../practice/README.md`를 본다.
+
 ## 벤치 API
 | 메서드와 경로 | 설명 |
 |---|---|

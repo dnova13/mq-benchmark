@@ -118,6 +118,22 @@ MQ_KAFKA_ENABLED=false node dist/main.js   # Kafka 없이 기동
    - key는 Kafka에서만 쓰인다(같은 key는 같은 파티션, 순서 보장). RabbitMQ와 Redis Streams는 무시한다.
    - 켜고 끄기가 필요하면 `ConditionalModule.registerWhen(RabbitMqModule.register(...), (env) => env.MQ_RABBITMQ_ENABLED !== 'false')`로 감싸고, 주입하는 쪽은 `@Optional()`을 붙인다(`bench/bench.module.ts` 참고).
 
+## 연습용 API (`/practice`)
+MQ 기본 동작을 curl로 해 보는 API다. 벤치마크와 별개인 `practice-topic`, `practice:stream`, `practice-queue`만 다룬다. 구현 위치는 `src/practice`이다.
+
+| 메서드와 경로 | 설명 |
+|---|---|
+| `POST /practice/{mq}/messages` | 발행. 본문 `{"key":"user-1","payload":"hello"}` |
+| `GET /practice/{mq}/messages?count&ack` | 최근 메시지 조회. Kafka·Redis는 남고, RabbitMQ는 `ack=true`면 사라진다(`ack=false`는 엿보기) |
+| `GET /practice/{mq}/info` | 상태(길이, 오프셋, 메시지·컨슈머 수) |
+| `DELETE /practice/{mq}` | 실습 대상 삭제 |
+
+```bash
+curl -X POST localhost:3000/practice/kafka/messages -H 'Content-Type: application/json' -d '{"key":"user-1","payload":"hello"}'
+curl "localhost:3000/practice/kafka/messages?count=5"
+```
+실습 전체 가이드(CLI, GUI, 코드 예제)는 `../practice/README.md`를 본다.
+
 ## 벤치 API
 | 메서드와 경로 | 설명 |
 |---|---|
