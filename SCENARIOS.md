@@ -93,7 +93,7 @@ python3 charts.py reports/scale-{spring,nest}-raw.jsonl   # 그래프
 - 같은 규모 안에서만 MQ를 비교한다(예: `A-1m`의 Kafka와 Redis).
 - **A와 B의 TPS는 직접 비교하지 않는다.** B에는 HTTP 처리와 부하 도구 성능이 섞인다.
 - B가 A보다 한참 낮으면 병목이 MQ가 아니라 HTTP 요청 처리 쪽이라는 뜻이다.
-- 같은 규모에서 Nest와 Spring의 차이는 MQ 클라이언트, 런타임, **컨슈머 구현 방식**(Nest는 묶어서 병렬, Spring은 건별)이 섞인 결과다.
+- 같은 규모에서 Nest와 Spring의 차이는 MQ 클라이언트, 런타임, **컨슈머 구현 방식**(Nest는 묶어서 동시 처리, Spring은 스레드마다 건별 처리)이 섞인 결과다. 구현 방식은 프레임워크가 강제하는 것이 아니라 선택이다(자세히: `docs/nest-vs-spring-concepts.md` 7절).
 - 1천 건은 실행 시간이 1초 안팎이라 노이즈가 크다. 1만 건 이상을 중심으로 본다.
 
 ## 알려진 한계

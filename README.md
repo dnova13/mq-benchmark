@@ -103,4 +103,8 @@ mq-benchmark/
 ## 알아 둘 점
 - 모든 브로커는 **단일 노드**다. 클러스터, 복제 환경의 성능과는 다르다.
 - 측정값은 브로커, DB, 앱, 부하 도구가 한 머신을 나눠 쓴 결과다. 절대 수치보다 상대 비교로 본다.
-- 두 앱의 컨슈머 구현 방식이 다르다(Nest는 묶어서 병렬 처리, Spring은 건별 처리). 그래서 Spring과 Nest의 차이에는 구현 차이도 섞여 있다.
+- 두 앱은 각 프레임워크에서 흔히 쓰는 방식으로 컨슈머를 구현해서 처리 방식이 다르다(Nest는 묶어서 동시 처리, Spring은 스레드마다 건별 처리). 프레임워크가 강제하는 것은 아니라 바꿀 수 있다. 그래서 Spring과 Nest의 차이에는 런타임 차이와 구현 차이가 섞여 있다. 이유와 측정 해석은 [docs/nest-vs-spring-concepts.md](docs/nest-vs-spring-concepts.md)의 7절에 있다.
+  - **바꾸는 방법**
+    - Spring을 묶음 처리로: Kafka·RabbitMQ는 배치 리스너(`List<String>`으로 받기), Redis는 `XREADGROUP COUNT 100`으로 직접 읽어 한 번에 ack
+    - Nest를 건별 처리로: Kafka는 `eachMessage`, Redis는 한 건씩 처리하고 건마다 ack, RabbitMQ는 채널마다 prefetch 1
+    - 코드 세팅법: [spring/README.md](spring/README.md), [nest/README.md](nest/README.md)의 "컨슈머 처리 방식 바꾸기" 절

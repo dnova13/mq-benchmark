@@ -159,6 +159,77 @@ curl "localhost:8080/bench/kafka?count=10000&size=256&db=true"
 ../scenarios.sh spring                 # 규모별 12개 시나리오 (../SCENARIOS.md)
 ```
 
+## 컨슈머 처리 방식 바꾸기 (건별 → 묶음)
+지금은 세 MQ 모두 **스레드마다 한 건씩** 처리한다. Spring 리스너(`@KafkaListener`, `@RabbitListener`, Redis 리스너 컨테이너)의 기본 방식이다. 여러 건을 묶어 처리하고 ack도 한 번에 하려면 아래처럼 바꾼다.
+- 벤치마크 결과는 지금 방식(건별)으로 쟀다.
+- NestJS 앱은 반대로 묶어서 처리한다. 왜 다른지는 `../docs/nest-vs-spring-concepts.md`의 "컨슈머 처리 방식이 다른 이유"를 본다.
+
+### Kafka: 배치 리스너
+```properties
+# application-kafka.properties: 한 번에 가져올 최대 건수
+spring.kafka.consumer.max-poll-records=500
+```
+```java
+// mq/kafka/KafkaMessageConsumer.java
+@KafkaListener(topics = "${mq.kafka.topic}", batch = "true")
+public void onMessages(List<String> payloads) {
+    payloads.forEach(handler::handle);   // 묶음을 받아 처리. 메서드가 끝나면 묶음 단위로 오프셋 커밋
+}
+```
+묶음 안을 동시에 처리하려면 스레드 풀에 나눠 맡기고 모두 끝날 때까지 기다린다.
+```java
+private final ExecutorService executor = Executors.newFixedThreadPool(10);
+
+@KafkaListener(topics = "${mq.kafka.topic}", batch = "true")
+public void onMessages(List<String> payloads) {
+    CompletableFuture.allOf(payloads.stream()
+            .map(p -> CompletableFuture.runAsync(() -> handler.handle(p), executor))
+            .toArray(CompletableFuture[]::new)).join();   // 모두 끝나야 커밋된다
+}
+```
+
+### RabbitMQ: 배치 리스너
+```java
+// mq/rabbitmq/RabbitMqConfig.java
+@Bean
+SimpleRabbitListenerContainerFactory batchFactory(SimpleRabbitListenerContainerFactoryConfigurer configurer,
+                                                  ConnectionFactory connectionFactory) {
+    var factory = new SimpleRabbitListenerContainerFactory();
+    configurer.configure(factory, connectionFactory);   // application-rabbitmq.properties 값(prefetch, 동시성) 적용
+    factory.setBatchListener(true);          // 리스너가 List로 받는다
+    factory.setConsumerBatchEnabled(true);   // 컨테이너가 메시지를 모아 묶음을 만든다
+    factory.setBatchSize(100);               // 최대 100건씩
+    return factory;
+}
+```
+```java
+// mq/rabbitmq/RabbitMqMessageConsumer.java
+@RabbitListener(queues = "${mq.rabbitmq.queue}", containerFactory = "batchFactory")
+public void onMessages(List<String> payloads) {
+    payloads.forEach(handler::handle);   // 메서드가 끝나면 묶음 전체를 ack
+}
+```
+
+### Redis Streams: 직접 여러 건 읽기
+리스너 컨테이너(`StreamMessageListenerContainer`)는 한 건씩 넘겨 준다. 묶음으로 처리하려면 컨테이너 대신 워커 스레드가 직접 `XREADGROUP`으로 읽는다.
+```java
+// mq/redis/RedisStreamConfig.java: 컨테이너 대신 워커(0~9)마다 스레드를 하나씩 띄워 아래 루프를 돌린다
+while (running) {
+    List<MapRecord<String, Object, Object>> records = redis.opsForStream().read(
+            Consumer.from(group, "consumer-" + i),
+            StreamReadOptions.empty().count(100).block(Duration.ofSeconds(1)),   // 최대 100건, 1초 대기
+            StreamOffset.create(key, ReadOffset.lastConsumed()));
+    if (records == null || records.isEmpty()) continue;
+    records.forEach(r -> handler.handle((String) r.getValue().get("data")));
+    redis.opsForStream().acknowledge(key, group,
+            records.stream().map(MapRecord::getId).toArray(RecordId[]::new));    // 묶음을 한 번에 XACK
+}
+```
+- `Record::getId`라고 쓰면 Java 21의 `java.lang.Record`와 이름이 겹쳐 컴파일 오류가 난다. `MapRecord::getId`로 쓴다.
+- 블로킹 읽기(`block`)는 Lettuce가 전용 커넥션으로 처리해서, 발행에 쓰는 공유 커넥션을 막지 않는다.
+
+위 코드 조각은 이 프로젝트에서 컴파일로 확인했다(Spring Boot 3.4.1, Java 21).
+
 ## 참고
 - Kafka 발행은 비동기 `send` 후 묶음마다 `flush`한다. 처리량을 더 높이려면 `spring.kafka.producer.properties.linger.ms`, `batch.size`를 조정한다.
 - RabbitMQ 리스너는 정상 처리 후 자동 ack(`AUTO`)한다. 예외가 나면 nack 후 재큐잉된다(Spring AMQP 기본값).

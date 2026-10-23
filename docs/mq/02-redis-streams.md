@@ -70,7 +70,7 @@
 | 코드 | Nest `nest/src/mq/redis-stream/`, Spring `spring/src/main/java/com/bench/mq/redis/` |
 
 **측정 결과 요약** (출처: [reports/scale-result.md](../../reports/scale-result.md), 4코어 머신, 10만 건 이상 기준)
-- **A(대량 발행):** Spring 약 4,400~4,800 TPS로 2위, Nest 약 6,700~7,200 TPS로 Kafka와 비슷한 1~2위. Nest가 Spring보다 약 1.5배 빠르다. Nest 컨슈머는 100건씩 병렬 처리하고, Spring은 건별로 처리하는 차이가 크게 작용한 것으로 보인다.
+- **A(대량 발행):** Spring 약 4,400~4,800 TPS로 2위, Nest 약 6,700~7,200 TPS로 Kafka와 비슷한 1~2위. Nest가 Spring보다 약 1.5배 빠르다. Nest 컨슈머는 100건씩 동시에 처리하고 한 번에 `XACK`한다. Spring은 건별로 처리하고 건마다 `XACK`해서 Redis 왕복이 많다. 이 구현 차이가 크게 작용한 것으로 보인다(런타임 차이만은 아님). 자세히: [Nest vs Spring 개념 7절](../nest-vs-spring-concepts.md)
 - **B(요청 1건 = 이벤트 1건, VU(동시 사용자) 100):** 두 앱 모두 처리량 1위다(Spring 약 3,040~3,230, Nest 약 2,500~2,750 TPS). 다만 컨슈머가 유입을 따라가지 못해 지연이 쌓였다. Spring 300만 건에서 p95가 293초였다.
 
 ## 더 보기

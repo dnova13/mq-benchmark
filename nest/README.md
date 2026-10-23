@@ -151,6 +151,56 @@ curl "localhost:3000/bench/kafka?count=10000&size=256&db=true"
 ../scenarios.sh nest                   # 규모별 12개 시나리오 (../SCENARIOS.md)
 ```
 
+## 컨슈머 처리 방식 바꾸기 (묶음 → 건별)
+지금은 Kafka와 Redis Streams는 **여러 건을 묶어 동시에** 처리하고, RabbitMQ는 prefetch(100)만큼 **동시에** 처리한다. Node에서 흔히 쓰는 방식이다. Spring처럼 한 건씩 처리하려면 아래처럼 바꾼다.
+- 벤치마크 결과는 지금 방식(묶음·동시)으로 쟀다.
+- 왜 다른지는 `../docs/nest-vs-spring-concepts.md`의 "컨슈머 처리 방식이 다른 이유"를 본다.
+
+### Kafka: `eachBatch` → `eachMessage`
+```ts
+// src/mq/kafka/kafka.consumer.ts
+await this.consumer.run({
+  partitionsConsumedConcurrently: this.cfg.partitionsConsumedConcurrently, // 파티션끼리는 동시에
+  eachMessage: async ({ message }) => {
+    await this.handler.handle(message.value.toString()); // 파티션 안에서는 한 건씩. 끝나면 오프셋 확정
+  },
+});
+```
+
+### Redis Streams: `Promise.all` → 한 건씩 처리하고 건마다 ack
+```ts
+// src/mq/redis-stream/redis-stream.consumer.ts (loop 안)
+for (const [id, fields] of entries as [string, string[]][]) {
+  await this.handler.handle(fields[1]);
+  await this.redis.xack(streamKey, group, id); // 건마다 XACK
+}
+```
+한 번에 읽는 건수도 1로 하려면 `.env`에 `REDIS_BATCH_SIZE=1`을 준다.
+
+### RabbitMQ: 채널마다 prefetch 1
+amqplib는 prefetch 수만큼 메시지를 미리 받아 콜백을 **동시에** 부른다. 그래서 콜백 안에서 `await`해도 여러 건이 함께 처리된다. 건별로 하려면 채널마다 prefetch를 1로 주고, 채널을 동시성 수(10)만큼 연다. 그러면 Spring의 "스레드 10개가 한 건씩"과 같은 모양이 된다.
+```ts
+// src/mq/rabbitmq/rabbitmq.connection.ts: 소비용 채널을 따로 열 수 있게 연결을 꺼내 준다
+private constructor(readonly connection: amqp.ChannelModel, readonly channel: amqp.Channel) {}
+```
+```ts
+// src/mq/rabbitmq/rabbitmq.consumer.ts
+async onModuleInit() {
+  for (let i = 0; i < 10; i++) {
+    const ch = await this.rabbit.connection.createChannel();
+    await ch.prefetch(1); // 이 채널은 ack 전까지 1건만 받는다
+    await ch.consume(this.cfg.queue, async (msg) => {
+      if (!msg) return;
+      await this.handler.handle(msg.content.toString());
+      ch.ack(msg);
+    });
+  }
+}
+```
+- 지금 구현은 발행과 소비가 채널 하나를 함께 쓴다(`RabbitMqConnection.channel`). 위처럼 소비용 채널을 따로 열면, 종료 시 이 채널들도 닫히도록 연결 종료(`onApplicationShutdown`)에 맡기면 된다.
+
+위 코드 조각은 이 프로젝트에서 타입 검사(`tsc --noEmit`)로 확인했다.
+
 ## 참고
 - Kafka 컨슈머는 배치를 1,000건씩 나눠 `Promise.all`로 병렬 처리하고, 그때마다 offset을 확정하고 heartbeat를 보낸다.
 - RabbitMQ 발행은 쓰기 버퍼가 차면 `drain`을 기다린다. 컨슈머는 처리 후 수동 `ack`한다.
