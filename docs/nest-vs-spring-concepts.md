@@ -81,6 +81,7 @@
 - 실무에서는 한 프레임워크로 다 하기보다, 메인 API는 Spring이나 Nest로 두고 무거운 계산만 별도 워커나 서비스(Python, Go 등)로 분리하는 구성이 흔하다.
 
 ## 6. MQ는 어느 분야에서 많이 쓰나
+MQ가 무엇인지, 세 MQ의 구조와 장단점은 `docs/mq/`(MQ란, Redis Streams, RabbitMQ, Kafka)에 정리했다.
 
 ### 분야별
 | 분야 | 주로 쓰는 MQ | 이유 |

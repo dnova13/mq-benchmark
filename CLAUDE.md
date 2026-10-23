@@ -22,6 +22,7 @@ mq-benchmark/
 ├─ report.py            # jsonl -> 마크다운 표
 ├─ compare.py           # Spring vs Nest 비교표
 ├─ charts.py            # 결과 그래프(PNG, matplotlib + 한글 폰트)
+├─ docs/mq/             # MQ 개념 정리(MQ란, Redis Streams, RabbitMQ, Kafka) + 도식 PNG(img/, diagrams.py로 생성)
 ├─ practice/            # MQ 실습: CLI 스크립트(cli/), Node·Java 예제(node/, java/), 가이드(README.md, redis/kafka/rabbitmq/gui.md)
 ├─ nest/                # NestJS 10 (TypeScript, @nestjs/config + .env), 포트 3000
 └─ spring/              # Spring Boot 3.4 + Java 21 (Gradle, properties), 포트 8080
@@ -91,6 +92,7 @@ cd spring && ./gradlew bootRun     # 또는 ./gradlew build -x test 후 java -ja
 ## 문서
 - `GUIDE.md`: 전체 테스트 가이드 / `nest/README.md`, `spring/README.md`: 앱별 구조, 설정, API, 다른 프로젝트로 가져가는 법
 - `SCENARIOS.md`: 시나리오 A, B 정의, 실행 절차, 결과 해석 기준
+- `docs/mq/README.md`: MQ 개념 문서 목차와 노션 페이지 구성 제안. `01-what-is-mq.md`, `02-redis-streams.md`, `03-rabbitmq.md`, `04-kafka.md`(그림은 `docs/mq/img/`, `python3 docs/mq/diagrams.py`로 다시 생성)
 - `practice/README.md`: MQ 실습 안내(CLI 스크립트, GUI, Node·Java 예제, 앱 연습용 API `/practice`). MQ별 `practice/redis.md`, `kafka.md`, `rabbitmq.md`, GUI 화면 사용법 `practice/gui.md`
 - `docs/k6-guide.md`: k6로 B 시나리오 실행하는 방법(scenarios.sh, 직접 실행, 변수, 웹 대시보드와 HTML 리포트, 결과 읽는 법)
 - `docs/locust-guide.md`: Locust로 B 시나리오 실행하는 방법(규모별 스크립트, 웹 화면, 캡처). 결과 리포트에는 Locust 결과를 넣지 않는다
