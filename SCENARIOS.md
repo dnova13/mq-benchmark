@@ -107,3 +107,7 @@ MQ=kafka COUNT=10000 DB=true locust -f load/locust/locustfile.py \
 - `DELETE /runs`가 Rabbit 큐도 비운다. 컨슈머는 현재 메모리에 없는 runId의 메시지를 저장하지 않는다(이전 회차 잔여분)
 - Nest Rabbit 발행이 `sendToQueue`가 false면 `drain`을 기다린다(backpressure)
 - Nest Kafka 컨슈머 `sessionTimeout` 60초, 배치를 1,000건씩 처리하고 그때마다 heartbeat
+
+## 구조 개편 (2026-10-23)
+- 두 앱을 MQ별 모듈로 나누고 Spring은 Gradle과 properties로 바꿨다. 측정 조건(배치, ack, prefetch, 동시성 10, 영속성, 이름, API)은 같다.
+- 차이 한 가지: Kafka key(userId)를 이벤트 생성 시 같이 만든다. Nest는 전에 Kafka 발행마다 `JSON.parse`로 key를 꺼냈는데 이 비용이 없어졌다. Nest Kafka 발행 수치가 조금 좋아질 수 있다.

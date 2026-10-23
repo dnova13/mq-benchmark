@@ -21,9 +21,22 @@ mq-benchmark/
 ├─ reports/             # 결과 리포트(spring-result.md), 원본(spring-raw.jsonl), report.py 출력
 ├─ report.py            # jsonl -> 마크다운 표
 ├─ compare.py           # Spring vs Nest 비교표
-├─ nest/                # NestJS 10 (TypeScript), 포트 3000
-└─ spring/              # Spring Boot 3.4 + Java 21 (Maven), 포트 8080
+├─ nest/                # NestJS 10 (TypeScript, @nestjs/config + .env), 포트 3000
+└─ spring/              # Spring Boot 3.4 + Java 21 (Gradle, properties), 포트 8080
 ```
+
+### 앱 내부 구조 (MQ별 모듈 분리, 다른 프로젝트로 복사해 재사용하는 것이 목적)
+| | Spring (`com.bench`) | Nest (`src/`) |
+|---|---|---|
+| 공통 인터페이스 | `mq/common` (`Message`, `MessageHandler`, `MessagePublisher`) | `common/messaging/message.interface.ts` |
+| Kafka | `mq/kafka` + `application-kafka.properties` | `mq/kafka` + `config/kafka.config.ts` |
+| RabbitMQ | `mq/rabbitmq` + `application-rabbitmq.properties` | `mq/rabbitmq` + `config/rabbitmq.config.ts` |
+| Redis Streams | `mq/redis` + `application-redis.properties` | `mq/redis-stream` + `config/redis.config.ts` |
+| 벤치 전용 | `benchmark/{controller,service,repository}` | `bench/` (`order/` 포함), `database/` |
+| MQ 끄기 | `mq.<kafka\|rabbitmq\|redis>.enabled=false` | `MQ_<KAFKA\|RABBITMQ\|REDIS>_ENABLED=false` |
+
+- MQ 모듈은 벤치 코드를 모른다. 컨슈머는 앱이 구현한 `MessageHandler`를 호출하고, 벤치는 `MessagePublisher`로 발행한다.
+- 꺼진 MQ로 벤치 API를 호출하면 400이다.
 
 ## 인프라 (docker-compose.yml)
 원래 포트 앞에 `3`을 붙인 외부 포트를 쓴다.
@@ -65,11 +78,11 @@ docker compose up -d
 cd nest && npm install && npm run start:dev
 
 # 3) Spring Boot (JDK 21 필요)
-cd spring && mvn spring-boot:run
+cd spring && ./gradlew bootRun     # 또는 ./gradlew build -x test 후 java -jar build/libs/mq-bench-spring-0.0.1.jar
 ```
 
 ## 문서
-- `GUIDE.md`: 전체 테스트 가이드 / `nest/GUIDE.md`, `spring/GUIDE.md`: 앱별 가이드와 API
+- `GUIDE.md`: 전체 테스트 가이드 / `nest/README.md`, `spring/README.md`: 앱별 구조, 설정, API, 다른 프로젝트로 가져가는 법
 - `SCENARIOS.md`: 시나리오 A, B 정의, 실행 절차, 결과 해석 기준
 - `docs/nest-vs-spring-concepts.md`: I/O vs CPU, Node vs Spring, 구조/생태계, MQ 쓰임새 개념 정리(일반 경향, 측정값 아님)
 
@@ -98,4 +111,5 @@ cd spring && mvn spring-boot:run
 - 검증 상태: Nest, Spring 모두 빌드와 시나리오 A, B(k6, Locust)를 1,000건 규모로 실행해 `dbCount`와 처리 건수 일치를 확인했다. Nest, Spring 모두 전체 매트릭스(각 150회)를 실행했다.
 - 진행 중 `GET /runs/{id}`는 건수만 반환한다. 지연(p50/p95/p99)과 `dbCount`는 완료 시 한 번 계산해 캐시하고, 미완료여도 `?final=true`면 계산한다(1M건 정렬과 `COUNT(*)` 비용 때문).
 - 대용량 대응 변경(2026-10-22): MariaDB 버퍼 풀 1G, `DELETE /runs`에서 Rabbit 큐 purge, 미등록 runId 메시지는 저장 안 함, Nest Rabbit backpressure, Nest Kafka sessionTimeout 60초. 상세는 `SCENARIOS.md`
+- 구조 개편(2026-10-23): MQ별 모듈 분리, Spring Maven→Gradle과 yml→properties, Nest `@nestjs/config`. 배치 크기, ack, prefetch, 동시성, 이름은 그대로라 측정 조건은 같다. 이벤트를 만들 때 Kafka key(userId)를 같이 만들도록 바뀌어, Nest가 Kafka 발행마다 하던 `JSON.parse`가 없어졌다.
 - Locust는 종료 순간 진행 중이던 요청이 통계에서 빠질 수 있다. 결과는 `RESULT`의 `processed`를 기준으로 본다.

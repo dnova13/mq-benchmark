@@ -1,14 +1,11 @@
 import { Module } from '@nestjs/common';
-import { BenchController } from './bench.controller';
-import { KafkaService } from './kafka.service';
-import { RedisStreamService } from './redis-stream.service';
-import { RabbitService } from './rabbit.service';
-import { DbService } from './db.service';
-import { RunService } from './run.service';
-import { ProcessorService } from './processor.service';
+import { ConfigModule } from '@nestjs/config';
+import { BenchModule } from './bench/bench.module';
 
 @Module({
-  controllers: [BenchController],
-  providers: [KafkaService, RedisStreamService, RabbitService, DbService, RunService, ProcessorService],
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true }), // .env 로드. 각 모듈은 forFeature로 자기 설정만 등록한다
+    BenchModule,
+  ],
 })
 export class AppModule {}

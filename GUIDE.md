@@ -1,7 +1,7 @@
 # 테스트 가이드 (빠른 시작)
 
 ## 1. 사전 준비
-- Docker, Node 20 이상, JDK 21, Maven, k6, Locust(`brew install k6`, `pip install locust`)
+- Docker, Node 20 이상, JDK 21, k6, Locust(`brew install k6`, `pip install locust`). Gradle은 `spring/gradlew`가 내려받는다
 
 ## 2. 인프라 기동
 ```bash
@@ -18,9 +18,9 @@ docker compose ps          # 4개 컨테이너가 Up인지 확인
 ## 3. 앱 실행 (한 번에 하나만 실행하는 것을 권장)
 ```bash
 cd nest   && npm install && npm run start:dev      # :3000
-cd spring && mvn spring-boot:run                   # :8080
+cd spring && ./gradlew bootRun                     # :8080
 ```
-각 앱의 자세한 내용은 `nest/GUIDE.md`, `spring/GUIDE.md`를 본다.
+각 앱의 폴더 구조, 설정, 다른 프로젝트로 가져가는 법은 `nest/README.md`, `spring/README.md`를 본다.
 
 ## 4. 벤치마크 (시나리오 A, B)
 상세 시나리오는 `SCENARIOS.md`를 본다.
