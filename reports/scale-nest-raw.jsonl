@@ -37,3 +37,4 @@
 {"app": "nest", "scenario": "A-100k", "mq": "rabbit", "run": 1, "count": 100000, "size": 256, "db": true, "vus": 0, "tps": 4625, "totalMs": 21621, "p50": 11264, "p95": 19029, "p99": 19769, "dbCount": 100000, "done": true}
 {"app": "nest", "scenario": "A-100k", "mq": "rabbit", "run": 2, "count": 100000, "size": 256, "db": true, "vus": 0, "tps": 4586, "totalMs": 21804, "p50": 11593, "p95": 19003, "p99": 19685, "dbCount": 100000, "done": true}
 {"app": "nest", "scenario": "A-100k", "mq": "rabbit", "run": 3, "count": 100000, "size": 256, "db": true, "vus": 0, "tps": 4418, "totalMs": 22634, "p50": 12835, "p95": 20181, "p99": 20638, "dbCount": 100000, "done": true}
+{"app": "nest", "scenario": "A-500k", "mq": "kafka", "run": 1, "count": 500000, "size": 256, "db": true, "vus": 0, "tps": 6578, "totalMs": 76008, "p50": 37029, "p95": 66565, "p99": 69278, "dbCount": 500000, "done": true}
