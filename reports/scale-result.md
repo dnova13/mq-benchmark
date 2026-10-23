@@ -176,20 +176,6 @@ B에서 Spring은 처리량이 더 높고 **지연은 훨씬 짧다**. Kafka는 
 - 브로커와 클라이언트 튜닝(Kafka `linger.ms`, Rabbit publisher confirm, Redis 파이프라인 크기 등)은 하지 않았다.
 - 이 리포트는 이전 측정(2026-10-09)을 대체한다. 머신과 코드가 달라 이전 수치와 직접 비교하지 않는다.
 
-## 7. Locust로 직접 재기
-
-B 시나리오는 Locust로도 돌릴 수 있다. 이번 리포트에는 넣지 않았고, 필요하면 아래처럼 직접 실행한다. Locust는 Python 기반이라 같은 머신에서 k6보다 처리량이 낮게 나온다. 이 머신에서는 약 절반이었다.
-
-```bash
-pip install locust                                   # 앱을 하나 띄운 상태에서
-load/locust/run-scale.sh spring                      # 6개 규모 × 3 MQ, 각 1회, VU(동시 사용자) 100
-load/locust/run-scale.sh nest 10k,100k redis         # 일부만
-CAPTURE=1 load/locust/run-scale.sh spring 100k       # Locust 리포트 화면 PNG 캡처(Node + Playwright 필요)
-```
-- 결과는 `results/locust-<app>-<시각>/`에 저장된다. `raw.jsonl`, 회차별 HTML 리포트(차트 포함), CSV가 들어 있다.
-- k6와 비교 그래프: `python3 charts.py reports/scale-{spring,nest}-raw.jsonl <spring raw.jsonl> <nest raw.jsonl>` → `reports/img/k6-vs-locust.png`
-- 웹 화면으로 보려면 `--headless` 없이 실행하고 http://localhost:8089 에서 사용자 수 100을 넣는다.
-
 ## 재현
 
 ```bash

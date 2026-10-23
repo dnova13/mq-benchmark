@@ -38,6 +38,7 @@ k6 run -e MQ=kafka -e COUNT=10000 -e VUS=100 -e DB=true load/k6/orders.js
 MQ=kafka COUNT=10000 DB=true locust -f load/locust/locustfile.py --headless -u 100 -r 100 -t 10m --host http://localhost:3000
 ```
 Spring을 테스트할 때는 k6는 `-e BASE=http://localhost:8080`, Locust는 `--host http://localhost:8080`으로 바꾼다.
+Locust 규모별 실행, 웹 화면, 캡처 방법은 `docs/locust-guide.md`를 본다.
 
 **전체 시나리오 자동 실행**
 ```bash

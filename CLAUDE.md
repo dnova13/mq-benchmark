@@ -85,6 +85,7 @@ cd spring && ./gradlew bootRun     # 또는 ./gradlew build -x test 후 java -ja
 ## 문서
 - `GUIDE.md`: 전체 테스트 가이드 / `nest/README.md`, `spring/README.md`: 앱별 구조, 설정, API, 다른 프로젝트로 가져가는 법
 - `SCENARIOS.md`: 시나리오 A, B 정의, 실행 절차, 결과 해석 기준
+- `docs/locust-guide.md`: Locust로 B 시나리오 실행하는 방법(규모별 스크립트, 웹 화면, 캡처). 결과 리포트에는 Locust 결과를 넣지 않는다
 - `docs/nest-vs-spring-concepts.md`: I/O vs CPU, Node vs Spring, 구조/생태계, MQ 쓰임새 개념 정리(일반 경향, 측정값 아님)
 
 ## 결과
