@@ -48,8 +48,22 @@ def load(path):
 
 def human(n, _=None):
     n = int(n)
-    return f'{n // 1_000_000}백만' if n >= 1_000_000 and n % 1_000_000 == 0 else \
-        f'{n // 10_000}만' if n >= 10_000 and n % 10_000 == 0 else f'{n:,}'
+    return f'{n // 10_000}만' if n >= 10_000 and n % 10_000 == 0 else f'{n:,}'
+
+
+def end_labels(ax, items, gap=13):
+    """선 끝 라벨이 겹치지 않도록 화면 좌표에서 최소 gap(px)만큼 위아래로 벌린다. items: [(x, y, text)]"""
+    if not items:
+        return
+    ax.figure.canvas.draw()
+    to_px, to_data = ax.transData, ax.transData.inverted()
+    pts = sorted(((to_px.transform((x, y)), x, t) for x, y, t in items), key=lambda p: p[0][1])
+    ys = [p[0][1] for p in pts]
+    for i in range(1, len(ys)):
+        ys[i] = max(ys[i], ys[i - 1] + gap)
+    for (px, x, t), y in zip(pts, ys):
+        ax.annotate(t, xy=(x, to_data.transform((px[0], y))[1]), xytext=(6, 0), textcoords='offset points',
+                    va='center', fontsize=9, color=INK2, annotation_clip=False)
 
 
 def series(data, kind, mq, idx):
@@ -57,15 +71,14 @@ def series(data, kind, mq, idx):
     return [p[0] for p in pts], [p[1] for p in pts]
 
 
-def lines(ax, xs_ys, fmt, log_y=False):
+def lines(ax, xs_ys, fmt, log_y=False, ylim0=False):
+    labels = []
     for mq, (xs, ys) in xs_ys.items():
         if not xs:
             continue
         ax.plot(xs, ys, color=COLOR[mq], marker=MARKER[mq], markersize=7, linewidth=2,
                 markeredgecolor=SURFACE, markeredgewidth=1.5, label=LABEL[mq])
-        # 선 끝 직접 라벨(텍스트는 본문 잉크색, 옆의 마커가 계열을 표시)
-        ax.annotate(fmt(ys[-1]), (xs[-1], ys[-1]), xytext=(6, 0), textcoords='offset points',
-                    va='center', fontsize=9, color=INK2)
+        labels.append((xs[-1], ys[-1], fmt(ys[-1])))
     ax.set_xscale('log')
     if log_y:
         ax.set_yscale('log')
@@ -73,6 +86,10 @@ def lines(ax, xs_ys, fmt, log_y=False):
     ax.xaxis.set_major_formatter(FuncFormatter(human))
     ax.xaxis.set_minor_formatter(FuncFormatter(lambda *_: ''))
     ax.set_xlabel('건수(이벤트 수)')
+    if ylim0:
+        ax.set_ylim(bottom=0)
+    # 선 끝 직접 라벨(텍스트는 본문 잉크색, 옆의 마커가 계열을 표시)
+    end_labels(ax, labels)
 
 
 def app_chart(data, app, path):
@@ -80,11 +97,10 @@ def app_chart(data, app, path):
     for col, kind in enumerate('AB'):
         tps = {m: series(data, kind, m, 0) for m in MQS}
         p95 = {m: series(data, kind, m, 1) for m in MQS}
-        lines(axes[0][col], tps, lambda v: f'{int(v):,}')
+        lines(axes[0][col], tps, lambda v: f'{int(v):,}', ylim0=True)
         axes[0][col].set_title(f'{KIND[kind]} · 처리량', loc='left', fontsize=11)
         axes[0][col].set_ylabel('TPS (초당 처리 건수, 높을수록 좋음)')
         axes[0][col].yaxis.set_major_formatter(FuncFormatter(lambda v, _: f'{int(v):,}'))
-        axes[0][col].set_ylim(bottom=0)
         lines(axes[1][col], p95, lambda v: f'{v / 1000:,.1f}s' if v >= 1000 else f'{int(v)}ms', log_y=True)
         axes[1][col].set_title(f'{KIND[kind]} · 지연 p95', loc='left', fontsize=11)
         axes[1][col].set_ylabel('p95 지연(ms, 로그, 낮을수록 좋음)')
@@ -110,9 +126,7 @@ def ratio_chart(sp, ne, path):
         lines(ax, r, lambda v: f'{v:.2f}')
         ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _: f'{v:.1f}'))
         ax.set_title(KIND[kind], loc='left', fontsize=11)
-        ax.text(0.01, 0.97, '위: Nest가 빠름 / 아래: Spring이 빠름', transform=ax.transAxes,
-                va='top', fontsize=9, color=INK2)
-    axes[0].set_ylabel('Nest TPS ÷ Spring TPS')
+    axes[0].set_ylabel('Nest TPS ÷ Spring TPS\n(1보다 위 = Nest가 빠름)')
     handles, labels = axes[0].get_legend_handles_labels()
     fig.legend(handles, labels, loc='upper right', ncol=3, frameon=False)
     fig.suptitle('같은 MQ를 썼을 때 Nest와 Spring의 처리량 비율', x=0.01, ha='left', fontsize=14)
@@ -125,6 +139,7 @@ def tool_chart(k6s, locusts, path):
     """B 방식: 같은 시나리오를 k6와 Locust로 돌렸을 때 처리량. 색=MQ, 실선=k6, 점선=Locust"""
     fig, axes = plt.subplots(1, len(k6s), figsize=(12, 4.8), sharey=True)
     for ax, (app, k6), (_, lc) in zip(axes, k6s, locusts):
+        labels = []
         for m in MQS:
             for data, style, tool in ((k6, '-', 'k6'), (lc, '--', 'Locust')):
                 xs, ys = series(data, 'B', m, 0)
@@ -132,8 +147,7 @@ def tool_chart(k6s, locusts, path):
                     continue
                 ax.plot(xs, ys, color=COLOR[m], marker=MARKER[m], markersize=7, linewidth=2, linestyle=style,
                         markeredgecolor=SURFACE, markeredgewidth=1.5, label=f'{LABEL[m]} · {tool}')
-                ax.annotate(f'{int(ys[-1]):,}', (xs[-1], ys[-1]), xytext=(6, 0), textcoords='offset points',
-                            va='center', fontsize=9, color=INK2)
+                labels.append((xs[-1], ys[-1], f'{int(ys[-1]):,}'))
         ax.set_xscale('log')
         ax.xaxis.set_major_formatter(FuncFormatter(human))
         ax.xaxis.set_minor_formatter(FuncFormatter(lambda *_: ''))
@@ -141,6 +155,7 @@ def tool_chart(k6s, locusts, path):
         ax.set_ylim(bottom=0)
         ax.set_xlabel('건수(요청 수 = 이벤트 수)')
         ax.set_title(app, loc='left', fontsize=11)
+        end_labels(ax, labels)
     axes[0].set_ylabel('TPS (초당 처리 건수)')
     handles, labels = axes[0].get_legend_handles_labels()
     fig.legend(handles, labels, loc='upper right', ncol=3, frameon=False, fontsize=9)
