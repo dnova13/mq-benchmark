@@ -103,10 +103,3 @@ MQ가 무엇인지, 세 MQ의 구조와 장단점은 `docs/mq/`(MQ란, Redis Str
 - Redis Streams: 이미 Redis가 있고 규모가 크지 않을 때 가볍게 쓴다.
 - 이번 벤치마크 결과(Kafka가 대량 처리와 높은 동시성에서 앞섬)는 업계 쓰임새와 방향이 맞다. 다만 Kafka가 많이 선택되는 가장 큰 이유는 속도 하나가 아니라 메시지 보관, 재처리, 생태계다.
 
-## 7. 이 문서 기준으로 남은 확인 사항
-| 질문 | 확인 방법 | 상태 |
-|---|---|---|
-| Nest와 Spring 중 어느 쪽이 같은 조건에서 더 빠른가 | `./scenarios.sh nest` 후 Spring과 비교 | 실시: `reports/scale-result.md` (A는 Nest 약 1.2배, B는 Spring 약 1.15배, 전체 비율 1.08) |
-| CPU 작업이 늘면 앱 차이가 커지는가 | 메시지당 CPU 작업 옵션(`cpu=N`) 추가 후 측정 | 미구현 |
-| 10만~100만 건에서 순위가 유지되는가 | 큰 건수 시나리오 추가 | 미실시 |
-| Spring에 가상 스레드를 켜면 달라지는가 | `spring.threads.virtual.enabled=true`로 비교 | 미실시 |
