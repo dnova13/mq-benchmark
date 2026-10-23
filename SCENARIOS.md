@@ -77,8 +77,9 @@ MQ=kafka COUNT=10000 DB=true locust -f load/locust/locustfile.py \
 - 두 도구 모두 끝나면 `RESULT {...}` 한 줄을 출력한다.
 - Locust는 보낸 요청의 응답이 모두 돌아온 뒤 종료한다. CSV의 요청 수가 N보다 조금 적게 찍힐 수 있는데, 마지막 통계 집계 시점 차이다. HTML 리포트와 `RESULT`의 `processed`를 기준으로 본다.
 
-### Locust로 규모별 실행
-실행 방법은 `docs/locust-guide.md`를 본다.
+### 부하 도구별 가이드
+- k6: `docs/k6-guide.md` (변수, 웹 대시보드와 HTML 리포트, 결과 읽는 법)
+- Locust: `docs/locust-guide.md` (규모별 스크립트, 웹 화면, 캡처)
 
 ### 리포트 만들기
 ```bash
