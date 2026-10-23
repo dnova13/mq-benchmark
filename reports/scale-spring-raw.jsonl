@@ -52,3 +52,5 @@
 {"app": "spring", "scenario": "A-1m", "mq": "redis", "run": 2, "count": 1000000, "size": 256, "db": true, "vus": 0, "tps": 4724, "totalMs": 211692, "p50": 101176, "p95": 185329, "p99": 192889, "dbCount": 1000000, "done": true}
 {"app": "spring", "scenario": "A-1m", "mq": "rabbit", "run": 1, "count": 1000000, "size": 256, "db": true, "vus": 0, "tps": 3992, "totalMs": 250514, "p50": 125707, "p95": 211549, "p99": 218908, "dbCount": 1000000, "done": true}
 {"app": "spring", "scenario": "A-1m", "mq": "rabbit", "run": 2, "count": 1000000, "size": 256, "db": true, "vus": 0, "tps": 3953, "totalMs": 252989, "p50": 125281, "p95": 215189, "p99": 223096, "dbCount": 1000000, "done": true}
+{"app": "spring", "scenario": "A-3m", "mq": "kafka", "run": 1, "count": 3000000, "size": 256, "db": true, "vus": 0, "tps": 7141, "totalMs": 420084, "p50": 193239, "p95": 365395, "p99": 389430, "dbCount": 3000000, "done": true}
+{"app": "spring", "scenario": "A-3m", "mq": "redis", "run": 1, "count": 3000000, "size": 256, "db": true, "vus": 0, "tps": 4621, "totalMs": 649158, "p50": 311110, "p95": 568260, "p99": 589828, "dbCount": 3000000, "done": true}
