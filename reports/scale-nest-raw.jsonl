@@ -101,3 +101,5 @@
 {"app": "nest", "scenario": "B-500k", "mq": "redis", "run": 2, "count": 500000, "size": 256, "db": true, "vus": 100, "tps": 2443, "totalMs": 204674, "p50": 85329, "p95": 114784, "p99": 117923, "dbCount": 500000, "done": true}
 {"app": "nest", "scenario": "B-500k", "mq": "redis", "run": 3, "count": 500000, "size": 256, "db": true, "vus": 100, "tps": 2501, "totalMs": 199907, "p50": 83159, "p95": 113013, "p99": 116070, "dbCount": 500000, "done": true}
 {"app": "nest", "scenario": "B-500k", "mq": "rabbit", "run": 1, "count": 500000, "size": 256, "db": true, "vus": 100, "tps": 1907, "totalMs": 262231, "p50": 117961, "p95": 154771, "p99": 158952, "dbCount": 500000, "done": true}
+{"app": "nest", "scenario": "B-500k", "mq": "rabbit", "run": 2, "count": 500000, "size": 256, "db": true, "vus": 100, "tps": 1943, "totalMs": 257304, "p50": 118566, "p95": 155497, "p99": 159827, "dbCount": 500000, "done": true}
+{"app": "nest", "scenario": "B-500k", "mq": "rabbit", "run": 3, "count": 500000, "size": 256, "db": true, "vus": 100, "tps": 2110, "totalMs": 237011, "p50": 105298, "p95": 138375, "p99": 141716, "dbCount": 500000, "done": true}
