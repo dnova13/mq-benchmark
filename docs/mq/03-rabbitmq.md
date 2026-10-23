@@ -79,8 +79,8 @@
 | 코드 | Nest `nest/src/mq/rabbitmq/`, Spring `spring/src/main/java/com/bench/mq/rabbitmq/` |
 
 **측정 결과 요약** (출처: [reports/scale-result.md](../../reports/scale-result.md), 4코어 머신, 10만 건 이상 기준)
-- **A(대량 발행):** 두 앱 모두 3위다. Spring 약 3,900~4,000, Nest 약 4,600~4,850 TPS.
-- **B(요청 1건 = 이벤트 1건, VU(동시 사용자) 100):** 처리량은 대부분 3위다(Spring 약 2,080~2,240, Nest 약 1,940~2,060 TPS). Spring에서는 지연이 Redis보다 훨씬 짧았다(300만 건 p95 6.1초, Redis는 293초).
+- **A(대량 발행):** 두 앱 모두 3위다. Spring 약 3,900\~4,000, Nest 약 4,600\~4,850 TPS.
+- **B(요청 1건 = 이벤트 1건, VU(동시 사용자) 100):** 처리량은 대부분 3위다(Spring 약 2,080\~2,240, Nest 약 1,940\~2,060 TPS). Spring에서는 지연이 Redis보다 훨씬 짧았다(300만 건 p95 6.1초, Redis는 293초).
 
 ## 더 보기
 - 실습(CLI, 코드 예제, 앱 API): [practice/rabbitmq.md](../../practice/rabbitmq.md)

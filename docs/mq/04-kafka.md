@@ -76,8 +76,8 @@
 | 코드 | Nest `nest/src/mq/kafka/`, Spring `spring/src/main/java/com/bench/mq/kafka/` |
 
 **측정 결과 요약** (출처: [reports/scale-result.md](../../reports/scale-result.md), 4코어 머신, 10만 건 이상 기준)
-- **A(대량 발행):** Spring에서 6개 규모 모두 1위다(약 7,000~7,500 TPS). Nest도 약 6,900~7,100 TPS로 Redis와 비슷한 최상위다. 두 앱 차이가 가장 작은 MQ다.
-- **B(요청 1건 = 이벤트 1건, VU(동시 사용자) 100):** 처리량은 Redis 다음 2위다(Spring 약 2,460~2,550, Nest 약 1,960~2,150 TPS). Spring에서는 **300만 건에서도 p95가 0.1초대**로, 들어오는 즉시 처리됐다.
+- **A(대량 발행):** Spring에서 6개 규모 모두 1위다(약 7,000\~7,500 TPS). Nest도 약 6,900\~7,100 TPS로 Redis와 비슷한 최상위다. 두 앱 차이가 가장 작은 MQ다.
+- **B(요청 1건 = 이벤트 1건, VU(동시 사용자) 100):** 처리량은 Redis 다음 2위다(Spring 약 2,460\~2,550, Nest 약 1,960\~2,150 TPS). Spring에서는 **300만 건에서도 p95가 0.1초대**로, 들어오는 즉시 처리됐다.
 
 ## 더 보기
 - 실습(CLI, 코드 예제, 앱 API): [practice/kafka.md](../../practice/kafka.md)

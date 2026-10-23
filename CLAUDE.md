@@ -72,7 +72,7 @@ docker compose down -v    # 종료와 데이터 삭제
 | Redis Streams | `ioredis` (`XADD`, `XREADGROUP`, `XACK`, 컨슈머 그룹) | `spring-boot-starter-data-redis` (Lettuce, `StreamMessageListenerContainer`) |
 | RabbitMQ | `amqplib` (`sendToQueue`, `consume`, `ack`) | `spring-boot-starter-amqp` (`RabbitTemplate`, `@RabbitListener`) |
 
-- ioredis는 주간 다운로드가 약 700만~1000만, amqplib는 약 150만~250만, kafkajs는 약 250만으로 각각 가장 많이 쓰인다. 수치는 추적 사이트와 시점마다 다르다.
+- ioredis는 주간 다운로드가 약 700만\~1000만, amqplib는 약 150만\~250만, kafkajs는 약 250만으로 각각 가장 많이 쓰인다. 수치는 추적 사이트와 시점마다 다르다.
 - NestJS 내장 Kafka/RabbitMQ transport도 내부적으로 kafkajs와 amqplib를 쓴다. 이 프로젝트는 순수 클라이언트를 직접 써서 오버헤드 차이를 줄였다.
 - NestJS에는 Redis Streams 공식 transport가 없다(내장 Redis transport는 pub/sub이고 영속성이 없다). 그래서 ioredis로 직접 구현했다.
 - kafkajs는 2024년 중반 이후 커밋이 거의 없다. 대안은 `@confluentinc/kafka-javascript`다.
@@ -110,7 +110,7 @@ cd spring && ./gradlew bootRun     # 또는 ./gradlew build -x test 후 java -ja
 ## 시나리오 요약
 - **A (대량 발행):** `GET /bench/{mq}?count&size&db` 1번 호출로 서버가 N건 발행. MQ와 컨슈머가 쌓인 메시지를 비우는 속도 측정
 - **B (요청 1건 = 이벤트 1건):** k6 또는 Locust가 `POST /orders?runId=`를 총 N번 호출. VU(동시 사용자) 100명이 N번을 나눠 보낸다. 실무형 흐름(API → MQ → 컨슈머 → MariaDB)
-- 시나리오: `A-1k`~`A-3m`, `B-1k`~`B-3m` (1천, 1만, 10만, 50만, 100만, 300만). 256B, DB 저장 O 고정. 반복은 규모에 따라 5~1회
+- 시나리오: `A-1k`\~`A-3m`, `B-1k`\~`B-3m` (1천, 1만, 10만, 50만, 100만, 300만). 256B, DB 저장 O 고정. 반복은 규모에 따라 5\~1회
 - 공통 API: `POST /runs`, `GET /runs/{runId}`, `DELETE /runs`(결과 초기화)
 - 결과 필드: `tps`, `totalMs`, `latencyMs{p50,p95,p99}`, `dbCount`
 - 실행: `./scenarios.sh <nest|spring> [repeat] [ids]`, Locust는 `load/locust/run-scale.sh <app> [규모] [MQ]`
