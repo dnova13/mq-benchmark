@@ -90,6 +90,7 @@ cd spring && ./gradlew bootRun     # 또는 ./gradlew build -x test 후 java -ja
 ```
 
 ## 문서
+- `README.md`: 프로젝트 소개(목적 3가지, 결과 요약, 빠른 시작, 문서 안내)
 - `GUIDE.md`: 전체 테스트 가이드 / `nest/README.md`, `spring/README.md`: 앱별 구조, 설정, API, 다른 프로젝트로 가져가는 법
 - `SCENARIOS.md`: 시나리오 A, B 정의, 실행 절차, 결과 해석 기준
 - `docs/mq/README.md`: MQ 개념 문서 목차와 노션 페이지 구성 제안. `01-what-is-mq.md`, `02-redis-streams.md`, `03-rabbitmq.md`, `04-kafka.md`(그림은 `docs/mq/img/`, `python3 docs/mq/diagrams.py`로 다시 생성)
