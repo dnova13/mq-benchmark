@@ -14,13 +14,14 @@
 ```
 mq-benchmark/
 ├─ docker-compose.yml   # MariaDB, Redis, Kafka(KRaft), RabbitMQ
-├─ load/                # 부하 스크립트: k6(load/k6/orders.js), Locust(load/locust/locustfile.py)
-├─ scenarios.sh         # 시나리오 매트릭스 자동 실행
+├─ load/                # 부하 스크립트: k6(load/k6/orders.js), Locust(load/locust/locustfile.py, run-scale.sh, capture.js)
+├─ scenarios.sh         # 규모별 시나리오(A/B × 1천~300만) 자동 실행
 ├─ bench.sh             # 시나리오 A 간편 호출
 ├─ results/             # 측정 결과(jsonl, git 제외)
-├─ reports/             # 결과 리포트(spring-result.md), 원본(spring-raw.jsonl), report.py 출력
+├─ reports/             # 결과 리포트(scale-result.md), 원본(scale-*-raw.jsonl), 표(scale-*-tables.md), 그래프(img/)
 ├─ report.py            # jsonl -> 마크다운 표
 ├─ compare.py           # Spring vs Nest 비교표
+├─ charts.py            # 결과 그래프(PNG, matplotlib + 한글 폰트)
 ├─ nest/                # NestJS 10 (TypeScript, @nestjs/config + .env), 포트 3000
 └─ spring/              # Spring Boot 3.4 + Java 21 (Gradle, properties), 포트 8080
 ```
@@ -87,17 +88,21 @@ cd spring && ./gradlew bootRun     # 또는 ./gradlew build -x test 후 java -ja
 - `docs/nest-vs-spring-concepts.md`: I/O vs CPU, Node vs Spring, 구조/생태계, MQ 쓰임새 개념 정리(일반 경향, 측정값 아님)
 
 ## 결과
-- `reports/spring-result.md`: Spring 기준 전체 결과와 결론(2026-10-09, 150회 측정). 요약: Kafka 8/10 시나리오 1위, DB 저장이 붙으면 MQ 간 격차가 1.4~1.7배로 축소
-- `reports/nest-vs-spring.md`: Nest 전체 결과(150회)와 Spring 비교. 요약: 전체 비율 Nest/Spring=1.09, 30케이스 중 21개는 범위가 겹쳐 우열 불가. Nest에서는 Redis 7/10 1위(Spring은 Kafka 8/10 1위)로 MQ 순위가 앱에 따라 뒤집힘. 원인은 컨슈머 구현 방식(배치 병렬 vs 건별) 차이 가능성이 큼
-- 재현: `./scenarios.sh <app> 5` 후 `python3 report.py`, `python3 compare.py reports/spring-raw.jsonl reports/nest-raw.jsonl`
+- `reports/scale-result.md`: 규모별 결과와 분석(2026-10-23, k6, 앱당 114회, 4코어 머신). Spring MQ 비교, Nest MQ 비교, Spring vs Nest, 그래프 포함
+  - A(대량 발행): Spring은 Kafka가 6개 규모 모두 1위(약 7,000~7,500 TPS), Nest는 Kafka ≈ Redis. Nest가 Spring보다 약 1.2배 빠름(Redis는 약 1.5배)
+  - B(요청 1건 = 이벤트 1건, VU(동시 사용자) 100): 두 앱 모두 Redis가 처리량 1위. Spring이 Nest보다 약 1.15배 빠르고 지연이 훨씬 짧음. Spring Kafka는 300만 건에서도 p95 0.1초대
+  - 처리량은 1만~10만 건부터 평탄하고, MQ 순위는 규모에 따라 거의 바뀌지 않음
+- 이전 결과(2026-10-09, 시나리오 A1~B5)는 폐기했다.
+- 재현은 `scale-result.md`의 "재현" 절을 본다.
 
 ## 시나리오 요약
-- **A (대량 발행):** `GET /bench/{mq}?count&size&db` 1번 호출로 서버가 N건 발행. MQ 자체 성능 측정
-- **B (요청 1건 = 이벤트 1건):** k6 또는 Locust가 `POST /orders?runId=`를 N번 호출. 실무형 흐름(API → MQ → 컨슈머 → MariaDB)
+- **A (대량 발행):** `GET /bench/{mq}?count&size&db` 1번 호출로 서버가 N건 발행. MQ와 컨슈머가 쌓인 메시지를 비우는 속도 측정
+- **B (요청 1건 = 이벤트 1건):** k6 또는 Locust가 `POST /orders?runId=`를 총 N번 호출. VU(동시 사용자) 100명이 N번을 나눠 보낸다. 실무형 흐름(API → MQ → 컨슈머 → MariaDB)
+- 시나리오: `A-1k`~`A-3m`, `B-1k`~`B-3m` (1천, 1만, 10만, 50만, 100만, 300만). 256B, DB 저장 O 고정. 반복은 규모에 따라 5~1회
 - 공통 API: `POST /runs`, `GET /runs/{runId}`, `DELETE /runs`(결과 초기화)
 - 결과 필드: `tps`, `totalMs`, `latencyMs{p50,p95,p99}`, `dbCount`
-- 대용량: A6(10만), A7(100만, DB), A8(100만, DB 없음), B6(10만), B7(100만). `./scenarios.sh <app> 3 large`로 실행하고 `all`에는 포함하지 않는다
-- 전체 실행: `./scenarios.sh <nest|spring> [repeat] [ids]`
+- 실행: `./scenarios.sh <nest|spring> [repeat] [ids]`, Locust는 `load/locust/run-scale.sh <app> [규모] [MQ]`
+- 문서와 리포트에서 VU는 "VU(동시 사용자)"로 풀어 쓴다.
 
 ## 구현 메모
 - 토픽, 큐, 스트림 이름은 `bench-topic`, `bench-queue`, `bench:stream`이다.
@@ -108,8 +113,8 @@ cd spring && ./gradlew bootRun     # 또는 ./gradlew build -x test 후 java -ja
 - 소비 후 `orders_result`에 `INSERT IGNORE`(멱등)하며, `db=true`일 때만 저장한다. 종료 판정은 처리(저장) 건수가 `expected`에 도달한 시점이다.
 - **공정한 비교를 위해** 세 MQ의 페이로드 크기, 메시지 수, ack 방식, 영속성 옵션을 가능한 한 맞춘다. 옵션을 바꾸면 결과에 기록한다.
 - 동시에 같은 브로커에 Nest와 Spring을 붙이면 컨슈머 그룹이 달라 각자 전체 메시지를 받는다. 비교 테스트는 한 번에 하나의 앱만 실행하는 편이 정확하다.
-- 검증 상태: Nest, Spring 모두 빌드와 시나리오 A, B(k6, Locust)를 1,000건 규모로 실행해 `dbCount`와 처리 건수 일치를 확인했다. Nest, Spring 모두 전체 매트릭스(각 150회)를 실행했다.
+- 검증 상태: Nest, Spring 모두 규모별 시나리오 12개를 k6로 전부 실행했다(앱당 114회, 모두 `done`이고 `dbCount`가 건수와 일치). Locust 스크립트는 1천·1만 건으로 동작을 확인했다.
 - 진행 중 `GET /runs/{id}`는 건수만 반환한다. 지연(p50/p95/p99)과 `dbCount`는 완료 시 한 번 계산해 캐시하고, 미완료여도 `?final=true`면 계산한다(1M건 정렬과 `COUNT(*)` 비용 때문).
 - 대용량 대응 변경(2026-10-22): MariaDB 버퍼 풀 1G, `DELETE /runs`에서 Rabbit 큐 purge, 미등록 runId 메시지는 저장 안 함, Nest Rabbit backpressure, Nest Kafka sessionTimeout 60초. 상세는 `SCENARIOS.md`
 - 구조 개편(2026-10-23): MQ별 모듈 분리, Spring Maven→Gradle과 yml→properties, Nest `@nestjs/config`. 배치 크기, ack, prefetch, 동시성, 이름은 그대로라 측정 조건은 같다. 이벤트를 만들 때 Kafka key(userId)를 같이 만들도록 바뀌어, Nest가 Kafka 발행마다 하던 `JSON.parse`가 없어졌다.
-- Locust는 종료 순간 진행 중이던 요청이 통계에서 빠질 수 있다. 결과는 `RESULT`의 `processed`를 기준으로 본다.
+- Locust는 보낸 요청의 응답이 모두 돌아온 뒤 종료한다(전에는 즉시 종료해 진행 중이던 몇 건이 빠졌다). 결과는 `RESULT`의 `processed`를 기준으로 본다.

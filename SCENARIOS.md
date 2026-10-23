@@ -10,7 +10,7 @@ Kafka, Redis Streams, RabbitMQ를 Spring Boot와 NestJS 두 앱에서 같은 조
 | HTTP 요청 수 | 1번 | N번 |
 | 보는 것 | HTTP를 빼고 **MQ와 컨슈머가 쌓인 메시지를 얼마나 빨리 비우나** | 사용자가 몰릴 때 **API → MQ → 컨슈머 → DB 전체가 얼마나 버티나** |
 | 실무 대응 | 로그/클릭 수집, 배치 적재, CDC, 밀린 메시지 재처리 | 주문, 결제 등 일반 API 서비스 |
-| 도구 | `curl` | **k6**(기본), **Locust**(교차 확인) |
+| 도구 | `curl` | **k6**(리포트 기준), **Locust**(직접 실행용 스크립트 제공) |
 
 ### VU(동시 사용자)란
 - **VU(동시 사용자)** = 부하 도구가 만드는 가상 사용자 수다. 각 VU는 요청을 보내고 응답을 받으면 바로 다음 요청을 보낸다.
@@ -32,7 +32,7 @@ Kafka, Redis Streams, RabbitMQ를 Spring Boot와 NestJS 두 앱에서 같은 조
 
 - 각 시나리오를 MQ 3종(kafka, redis, rabbit)으로 돌린다. MQ마다 **워밍업 1회**(1만 건, 기록 안 함) 뒤 반복 횟수만큼 기록한다.
 - 반복이 1~2회인 대용량 결과는 편차를 알 수 없으니 경향으로만 본다.
-- Locust는 B 시나리오 6개를 1회씩 돌리고, Locust 리포트 화면을 캡처해 둔다(`reports/img/locust/`).
+- 결과 리포트(`reports/scale-result.md`)는 k6 측정만 쓴다. Locust는 아래 "Locust로 규모별 실행"으로 직접 돌린다.
 
 ## 공통 규칙
 - 이벤트: 주문 JSON(`id`, `runId`, `userId`, `amount`, `createdAt`, `db`, `pad`). `pad`로 전체 크기를 256바이트에 맞춘다.
@@ -75,14 +75,27 @@ MQ=kafka COUNT=10000 DB=true locust -f load/locust/locustfile.py \
     --headless -u 100 -r 100 -t 30m --host http://localhost:8080 --html report.html
 ```
 - 두 도구 모두 끝나면 `RESULT {...}` 한 줄을 출력한다.
-- Locust 화면 통계가 N보다 몇 건 적을 수 있다. 종료 순간 진행 중이던 요청이 집계에서 빠진 것이니 `RESULT`의 `processed`를 기준으로 본다.
+- Locust는 보낸 요청의 응답이 모두 돌아온 뒤 종료한다. CSV의 요청 수가 N보다 조금 적게 찍힐 수 있는데, 마지막 통계 집계 시점 차이다. HTML 리포트와 `RESULT`의 `processed`를 기준으로 본다.
+
+### Locust로 규모별 실행
+```bash
+pip install locust                                 # 앱을 하나 띄운 상태에서
+load/locust/run-scale.sh spring                    # 1천~300만 6개 규모 × 3 MQ, 각 1회, VU(동시 사용자) 100
+load/locust/run-scale.sh nest 10k,100k redis       # 규모와 MQ를 골라서
+CAPTURE=1 load/locust/run-scale.sh spring 100k     # Locust 리포트 화면을 PNG로 캡처(Node + Playwright 필요)
+```
+- 결과: `results/locust-<app>-<시각>/` 아래 `raw.jsonl`(한 줄 = 1회), 회차별 HTML 리포트(RPS, 응답 시간, 사용자 수 차트), CSV, 캡처 PNG
+- 캡처만 따로: `node load/locust/capture.js <report.html> <out.png>` (`npm i -D playwright && npx playwright install chromium`)
+- k6 결과와 비교 그래프: `python3 charts.py reports/scale-{spring,nest}-raw.jsonl <spring raw.jsonl> <nest raw.jsonl>` → `reports/img/k6-vs-locust.png`
+- 웹 화면으로 보려면 `--headless` 없이 `locust -f load/locust/locustfile.py --host http://localhost:8080`을 실행하고 http://localhost:8089 에서 사용자 수(VU(동시 사용자)) 100을 넣는다. 환경 변수 `MQ`, `COUNT`, `DB=true`는 같이 준다.
+- Locust는 Python 기반이라 같은 머신에서 k6보다 처리량이 낮다(이 프로젝트 측정 머신에서 약 절반). 300만 건은 MQ마다 45분 이상 걸릴 수 있다.
 
 ### 리포트 만들기
 ```bash
 python3 report.py reports/scale-spring-raw.jsonl          # Spring MQ 비교표
 python3 report.py reports/scale-nest-raw.jsonl            # Nest MQ 비교표
 python3 compare.py reports/scale-spring-raw.jsonl reports/scale-nest-raw.jsonl   # Spring vs Nest
-python3 charts.py reports/scale-{spring,nest}-raw.jsonl reports/locust-{spring,nest}-raw.jsonl  # 그래프
+python3 charts.py reports/scale-{spring,nest}-raw.jsonl   # 그래프 (Locust raw 2개를 더 주면 k6-vs-locust.png도 생성)
 ```
 
 ## 결과 해석 기준

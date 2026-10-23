@@ -22,7 +22,7 @@ WAIT_SEC = float(os.getenv("WAIT_SEC", "300"))
 POLL_SEC = float(os.getenv("POLL_SEC", "0.1"))
 STALL_SEC = float(os.getenv("STALL_SEC", "15"))
 
-state = {"runId": None, "sent": 0, "quitting": False}
+state = {"runId": None, "sent": 0, "completed": 0, "quitting": False}
 
 
 @events.test_start.add_listener
@@ -32,6 +32,7 @@ def on_test_start(environment, **kwargs):
     r = requests.post(f"{host}/runs", params={"mq": MQ, "expected": COUNT, "size": SIZE, "db": DB})
     state["runId"] = r.json()["runId"]
     state["sent"] = 0
+    state["completed"] = 0
     state["quitting"] = False
 
 
@@ -65,14 +66,15 @@ class OrderUser(HttpUser):
     def order(self):
         i = state["sent"]
         if i >= COUNT:
-            # 목표 건수를 모두 보냈으면 종료 (별도 greenlet에서 한 번만 quit 호출)
-            if not state["quitting"]:
-                state["quitting"] = True
-                gevent.spawn(self.environment.runner.quit)
-            raise StopUser()
+            raise StopUser()  # 목표 건수를 다 보냈으면 이 사용자는 멈춘다
         state["sent"] += 1
         self.client.post(
             f"/orders?runId={state['runId']}",
             json={"userId": (i * 7919) % 1000 + 1, "amount": (i * 37) % 99900 + 100},
             name="/orders",
         )
+        # 보낸 요청의 응답이 모두 돌아온 뒤에 종료한다. 바로 quit하면 진행 중이던 요청이 끊겨 몇 건이 빠진다.
+        state["completed"] += 1
+        if state["completed"] >= COUNT and not state["quitting"]:
+            state["quitting"] = True
+            gevent.spawn(self.environment.runner.quit)
