@@ -19,21 +19,21 @@ MQ (카테고리)
 ├─ 2. Redis Streams           ← docs/mq/02-redis-streams.md
 ├─ 3. RabbitMQ                ← docs/mq/03-rabbitmq.md
 ├─ 4. Kafka                   ← docs/mq/04-kafka.md
-├─ 5. 성능 비교 결과           ← reports/scale-result.md (그래프: reports/img/*.png)
+├─ 5. Nest vs Spring 개념과 성능 비교     ← docs/nest-vs-spring-concepts.md
 ├─ 6. 부하 테스트 방법
 │   ├─ 시나리오 A·B, VU(동시 사용자)  ← SCENARIOS.md
 │   ├─ k6                      ← docs/k6-guide.md
 │   └─ Locust                  ← docs/locust-guide.md
-├─ 7. 실습
+├─ 7. MQ·프레임워크별 성능 측정 결과      ← reports/scale-result.md (그래프: reports/img/*.png)
+├─ 8. 실습
 │   ├─ 개요(CLI·GUI·코드·API)  ← practice/README.md
 │   ├─ Redis / RabbitMQ / Kafka ← practice/redis.md, rabbitmq.md, kafka.md
 │   └─ GUI 사용법              ← practice/gui.md
-├─ 8. 프로젝트 구조와 재사용    ← spring/README.md, nest/README.md
-└─ 9. Node vs Spring 개념       ← docs/nest-vs-spring-concepts.md
+└─ 9. 프로젝트 구조            ← spring/README.md, nest/README.md
 ```
 
 ## 읽는 순서
 1. **MQ란** → 왜 쓰는지와 공통 용어
 2. **Redis Streams → RabbitMQ → Kafka** → 단순한 것부터
 3. **실습**으로 직접 해 보기
-4. **성능 비교 결과**로 같은 조건에서의 차이 보기
+4. **MQ·프레임워크별 성능 측정 결과**로 같은 조건에서의 차이 보기
