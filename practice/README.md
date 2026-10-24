@@ -24,13 +24,7 @@
 docker compose --profile gui up -d
 docker compose ps        # 4개 브로커/DB + bench-redisinsight, bench-kafka-ui가 Up
 ```
-| GUI | 주소 | 로그인 |
-|---|---|---|
-| RedisInsight (Redis) | http://localhost:35540 | 없음. 처음 접속 시 약관 동의 |
-| Kafka UI (Kafka) | http://localhost:38080 | 없음 |
-| RabbitMQ Management | http://localhost:31567 | guest / guest |
-
-GUI 화면별 사용법은 [gui.md](gui.md)에 있다.
+GUI 주소와 사용법은 아래 [2. GUI](#2-gui)에 있다.
 
 ## MQ별 실습 가이드
 처음이라면 Redis → RabbitMQ → Kafka 순서를 권한다. 개념이 단순한 것부터다.
@@ -51,6 +45,16 @@ practice/cli/kafka.sh list
 practice/cli/rabbitmq.sh list
 ```
 각 단계는 실행하는 명령(`$ ...`)과 설명(`# ...`)을 같이 보여 준다. 마지막 단계가 정리(실습 데이터 삭제)다.
+
+## 2. GUI
+| GUI | 주소 | 로그인 |
+|---|---|---|
+| RedisInsight (Redis) | http://localhost:35540 | 없음. 처음 접속 시 약관 동의 |
+| Kafka UI (Kafka) | http://localhost:38080 | 없음 |
+| RabbitMQ Management | http://localhost:31567 | guest / guest |
+
+GUI는 `docker compose --profile gui up -d`로 띄웠을 때만 있다. CLI 스크립트, 코드 예제, 앱 API로 메시지를 넣고 GUI에서 새로고침하며 상태를 보면 된다.
+화면별 사용법과 실습 순서는 [gui.md](gui.md)에 있다.
 
 ## 3. 코드 예제
 세 MQ 모두 같은 형태다: `produce`(발행), `consume`(소비, Ctrl+C로 종료), `info`(상태). RabbitMQ는 `fanout`도 있다.
